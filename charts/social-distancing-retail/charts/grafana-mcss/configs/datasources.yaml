@@ -1,0 +1,15 @@
+# config file version
+apiVersion: 1
+
+# # list of datasources to insert/update depending
+# # what's available in the database
+datasources:
+- name: Mcss Covid
+  type: influxdb
+  access: proxy
+  orgID: 2
+  basicAuth: false
+  url: http://influxdb:8086
+  database: McssCovid
+  editable: false
+  version: 1

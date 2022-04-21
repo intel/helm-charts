@@ -1,0 +1,12 @@
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: mc-ssr
+  namespace: {{ .Values.global.namespace }}
+spec:
+  path: "/get_all_streams"
+  to:
+    kind: Service
+    name: {{ include "mc-ssr.fullname" . }}
+  port:
+    targetPort: 8000
