@@ -1,7 +1,0 @@
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: grafana-config
-  namespace: {{ .Values.global.namespace }}
-data:
-{{ (.Files.Glob "configs/*").AsConfig | indent 2 }}
