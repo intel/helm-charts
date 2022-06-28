@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "mc-ssr.fullname" . }}
+  labels:
+    {{- include "mc-ssr.labels" . | nindent 4 }}
+  namespace: {{ .Values.global.namespace }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "mc-ssr.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "mc-ssr.selectorLabels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ .Values.serviceAccount.name}}
+      serviceAccount: {{ .Values.serviceAccount.name}}
+      containers:
+      - name: {{ .Chart.Name }}
+        image: "{{ .Values.image.repository }}:{{ .Values.image.Version }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        env:
+          - name: LOCAL_HOST
+            value: "{{ .Values.serverIP }}"
+          - name: INFLUXDB_PORT
+            value: "{{ .Values.influxdbPort }}"
+          - name: NAMESPACE
+            value: "{{.Release.Namespace}}"
+        volumeMounts:
+        - mountPath: /app/camera_config.json
+          name: mc-ssr-config
+          readOnly: true
+          subPath: camera_config.json
+      volumes:
+      - configMap:
+          name: mc-ssr-config
+        name: mc-ssr-config

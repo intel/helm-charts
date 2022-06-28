@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana-mcss
+  namespace: {{ .Values.global.namespace }}
+  annotations:
+      prometheus.io/scrape: 'true'
+      prometheus.io/path: '/metrics'
+      prometheus.io/port: '3000'
+  labels:
+    app.kubernetes.io/name: grafana
+    app.kubernetes.io/instance: grafana-abcxzy
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    app.kubernetes.io/managed-by: helm
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+  - port: {{ .Values.service.port }}
+  selector:
+    app.kubernetes.io/name: grafana
+    app.kubernetes.io/instance: grafana-abcxzy
