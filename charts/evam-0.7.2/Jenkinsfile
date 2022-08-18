@@ -1,0 +1,176 @@
+pipeline {
+
+    agent {
+         node {
+            label 'aws-ec2'
+         }
+    }
+
+    environment {
+        MC_URL = 'https://esh-mc.intel.com' // API url to validate branch exists in mc
+        HELMCHART_ID = '628cb03a254262002bf3d5e7' // ID associated with the Service Layer
+        HELMCHART_NAME    = 'Edge_Video_Analytics_Helm_Chart' // Name which goes to Service Layer
+        HELMCHART_FILE_NAME = 'Edge_Video_Analytics_Helm_Chart' //Installation file name associated in the repo
+        AWS_S3_BUCKET = 'eshs3bucket'    // AWS S3 BUCKET NAME
+        AWS_S3_REGION = 'us-west-2' // AWS REGION NAME
+        AWS_S3_SOURCE = 'esh/jenkins' // AWS SOURCE Path for Jenkins upload
+        AWS_S3_CRED = 'AWS_S3_Upload' // AWS Global Credentials in Jekins
+        CURRENT_DATE = sh(script: 'date +%Y%m%d', returnStdout: true).trim()
+        GITLAB_LOGIN = credentials('Intel-Gitlab')
+    }
+
+    stages {
+        stage('Setup') {
+            steps {
+                sh '''
+                    echo "--------------------------------------------"
+                    echo " Agent setup "
+                    echo "--------------------------------------------"
+                    while pgrep apt > /dev/null; do
+                        sleep 11
+                    done
+                    sudo apt-get update
+                    echo "--------------------------------------------"
+                '''
+            }
+        }
+
+        stage('Install certs') {
+                steps {
+                    sh '''
+                        wget https://gitlab.devtools.intel.com/dse-public/devops-scripts/-/raw/master/install-certs.sh --no-check-certificate
+                        chmod a+x install-certs.sh
+                        ./install-certs.sh
+                    '''
+                    }
+        }
+
+        stage('Create Package') {
+            steps {
+                sh '''#!/bin/bash
+                    echo "--------------------------------------------"
+                    echo " Creating ${HELMCHART_NAME} tgz"
+                    echo "--------------------------------------------"
+                    echo "Helm Chart Name: ${HELMCHART_NAME}"
+                    echo "Helm Chart ID: ${HELMCHART_ID}"
+                    echo "Helm Chart File: ${HELMCHART_FILE_NAME}"
+                    rm -rf .git* build
+
+                    echo "-------------Copy dependencies--------------"
+                    rsync -av --exclude IntelSHA2RootChain-Base64 --exclude __MACOSX --exclude IntelSHA2RootChain-Base64.tgz --exclude IntelSHA2RootChain-Base64.zip \
+                              --exclude '*.crt' --exclude '*certs*' --exclude 'Jenkinsfile' ./ ${HELMCHART_ID}
+                    cd ${HELMCHART_ID}
+                    echo "---------------Create tgz-------------------"
+                    touch ${HELMCHART_ID}.tgz 
+                    tar --exclude=${HELMCHART_ID}.tgz -zcvf ${HELMCHART_ID}.tgz .
+                    retval=$?
+                    if [ $retval -ne 0 ]; then
+                        echo "Failed create helm tgz"
+                        exit $retval
+                    fi
+                    echo "--------------------------------------------"
+                '''
+            }
+        }
+        stage('Push to S3'){
+            steps{
+                script {
+                  def res = "";
+                  withAWS(region:"${AWS_S3_REGION}",credentials:"${AWS_S3_CRED}") {
+                      def identity=awsIdentity();//Log AWS credentials
+                      echo "--------------------------------------------"
+                      echo " Pushing ${HELMCHART_NAME} to DAL"
+                      echo "--------------------------------------------"
+                      echo "${HELMCHART_NAME} : ${HELMCHART_ID}.tgz"
+
+
+                      def MC_VERSION = sh(script: "wget --server-response --method POST --timeout=0 --header 'Content-Type: application/json' \
+                         --ca-directory=/etc/ssl/certs/ --no-proxy --no-check-certificate \
+                         --body-data '{\"id\":\"'${HELMCHART_ID}'\",\"version\":\"'$GIT_BRANCH'\"}' \
+                           \${MC_URL}/helmchart/validateVersion 2>&1 | grep \"HTTP/\" | awk '{print \$2}'", returnStdout: true).trim();
+
+                      echo "ID: $HELMCHART_ID, version: $GIT_BRANCH"
+
+                      echo "----------------mc version is : ${}MC_VERSION ------------"
+
+                      if ( MC_VERSION != '200' ) {
+                        echo "-------Push to S3 skipped-------"
+                        echo "--------------------------------------------"
+                        sh(script: "exit 0")
+                      }
+                      def TGZ_FILE_PATH = pwd();
+
+                      echo TGZ_FILE_PATH;
+                      res = s3Upload(file:"${TGZ_FILE_PATH}/${HELMCHART_ID}/${HELMCHART_ID}.tgz", bucket:"${AWS_S3_BUCKET}", path:"${AWS_S3_SOURCE}/helm/${HELMCHART_ID}.tgz");
+                  }
+                  if ( res != "s3://${AWS_S3_BUCKET}/${AWS_S3_SOURCE}/helm/${HELMCHART_ID}.tgz" ) {
+                    error("AWS S3 Upload Failed.");
+                  }
+                  
+                  echo "-----------Generate MD5sum------------------"
+                  def MD5SUM = sh(script: "md5sum \${HELMCHART_ID}/\${HELMCHART_ID}.tgz | cut -d ' ' -f1",returnStdout:true).trim();;
+                  if ( !MD5SUM ){
+                    error("Failed to generate md5sum")
+                  } 
+                  echo "original md5sum: ${MD5SUM}"
+                }
+            }
+        }
+        stage('Update MD5Sum'){
+            steps{
+                script {
+                  def TGZ_FILE_PATH = pwd();
+
+                  withAWS(region:"${AWS_S3_REGION}",credentials:"${AWS_S3_CRED}") {
+                      def identity=awsIdentity();//Log AWS credentials
+                      echo "--------------------------------------------"
+                      echo " Downloading ${HELMCHART_NAME} from S3"
+                      echo "--------------------------------------------"
+                      echo "${HELMCHART_NAME} : ${HELMCHART_ID}.tgz"
+
+                      sh(script: "sudo mkdir -p \${TGZ_FILE_PATH}/\${HELMCHART_ID}/download",returnStdout:true);
+                      res = s3Download(file:"${TGZ_FILE_PATH}/${HELMCHART_ID}/download/${HELMCHART_ID}.tgz", bucket:"${AWS_S3_BUCKET}", path:"${AWS_S3_SOURCE}/helm/${HELMCHART_ID}.tgz", force:true)
+                  }
+                  echo "-----------Generate MD5sum------------------"
+                  def MD5SUM = sh(script: "md5sum \${HELMCHART_ID}/download/\${HELMCHART_ID}.tgz | cut -d ' ' -f1",returnStdout:true).trim();
+                  if ( !MD5SUM ){
+                    error("Failed to generate md5sum")
+                  }
+                  echo "md5sum(s3): ${MD5SUM}"
+
+                  echo "--------------Post MD5sum-------------------"
+                  def RETVAL = sh(script: "wget --method POST --timeout=0 --header 'Content-Type: application/json' --body-data '{\"id\":\"'$HELMCHART_ID'\",\"hashValue\":\"'$MD5SUM'\"}' \${MC_URL}/helmchart/updateMD5Hash --ca-directory=/etc/ssl/certs/ --no-proxy --no-check-certificate",returnStatus:true);
+                  if ( RETVAL != 0 ) {
+                      error("Failed to post md5sum");
+                  }
+                  echo "--------------------------------------------"
+               }
+            }
+        }
+
+    }
+
+    post {
+        success {
+            emailext(
+                attachmentsPattern: "bandit_report.txt, pep8_output.txt",
+                replyTo: '$DEFAULT_REPLYTO',
+                subject: "Status of pipeline: ${currentBuild.fullDisplayName}",
+                body: "${env.BUILD_URL} has result ${currentBuild.result}",
+                recipientProviders: [[$class: 'DevelopersRecipientProvider']]
+            )
+            updateGitlabCommitStatus state: 'success'
+        }
+
+        failure {
+            emailext(
+                replyTo: '$DEFAULT_REPLYTO',
+                subject: "Status of pipeline: ${currentBuild.fullDisplayName}",
+                body: "${env.BUILD_URL} has result ${currentBuild.result}",
+                recipientProviders: [[$class: 'DevelopersRecipientProvider']]
+            )
+            updateGitlabCommitStatus state: 'failed'
+        }
+    }
+
+}

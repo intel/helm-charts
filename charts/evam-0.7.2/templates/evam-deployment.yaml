@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "chart.fullname" . }}-deployment
+  labels:
+    {{- include "chart.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "chart.selectorLabels" . | nindent 6 }}
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "chart.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+      - image: "{{ .Values.evamImage.repository }}:{{ .Values.evamImage.tag | default .Chart.AppVersion }}"
+        name: deployment
+        env:
+        - name: ENABLE_RTSP
+          value: "{{ .Values.evamImage.enableRTSP }}"
+        - name: RTSP_PORT
+          value: "8554"
+        - name:  RUN_MODE
+          value: "EVA"
+        - name: ENABLE_WEBRTC
+          value: "{{ .Values.evamImage.enableWEBRTC }}"
+        - name: WEBRTC_SIGNALING_SERVER
+          value: "{{ .Values.evamImage.signallingserverWEBRTC }}"
+        ports:
+        - containerPort: 8080
+          name: api-port
+        - containerPort: 8554
+          name: rtsp-port
+        volumeMounts:
+        - name: evam-models
+          mountPath: /home/pipeline-server/models
+        - name: evam-pipelines
+          mountPath: /home/pipeline-server/pipelines
+        - name: evam-resources
+          mountPath: /home/pipeline-server/resources
+      volumes:
+        - name: evam-models
+          hostPath:
+            path: {{ .Values.evamImage.filePath }}models/
+            type: DirectoryOrCreate
+        - name: evam-pipelines
+          hostPath:
+            path: {{ .Values.evamImage.filePath }}pipelines/
+            type: DirectoryOrCreate
+        - name: evam-resources
+          hostPath:
+            path: {{ .Values.evamImage.filePath }}resources/
+            # this field is optional
+            type: DirectoryOrCreate

@@ -1,0 +1,27 @@
+1. Get the application URLs by running these commands:
+
+kubectl get pods -o wide  
+
+2. Run a sample pipline on EVAM pods using the commmand below:
+
+curl --location -X POST 'http://<EVAM_POD_IP>:8080/pipelines/object_detection/person_vehicle_bike' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+  "source": {
+      "uri": "https://github.com/intel-iot-devkit/sample-videos/raw/master/person-bicycle-car-detection.mp4?raw=true",
+      "type": "uri"
+  },
+  "destination": {
+      "metadata": {
+        "type": "mqtt",
+        "host": "<MQTT_POD_IP>:1883",
+        "topic": "vaserving"
+      }
+  }
+}'
+
+3. Get the inference output on MQTT subscriber. 
+
+docker run -it  --entrypoint mosquitto_sub  eclipse-mosquitto:1.6 --topic vaserving -p 1883 -h <MQTT_POD_IP>
+
+
