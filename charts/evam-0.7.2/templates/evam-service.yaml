@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "chart.fullname" . }}-deployment
+  labels:
+    {{- include "chart.labels" . | nindent 4 }}
+
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+  - name: api-port
+    port: 8080
+    targetPort: 8080
+    nodePort: 30007
+  - name: rtsp-port
+    port: 8554
+    targetPort: 8554
+  selector:
+    {{- include "chart.selectorLabels" . | nindent 4 }}
+
+
+
