@@ -1,5 +1,17 @@
 apiVersion: v1
 entries:
+  evam:
+  - apiVersion: v2
+    appVersion: 0.7.2
+    created: "2022-08-18T11:59:19.958049415Z"
+    description: A Helm chart for deploying Edge Video Analytics Microservice and
+      Mosquitto Server in k8s
+    digest: 1c9819a31110acfe3baf6fa7069e3959e7b19108d13c540b3ff1391847360ea6
+    name: evam
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/evam-0.7.2/evam-0.7.2.tgz
+    version: 0.7.2
   social-distancing-retail:
   - apiVersion: v2
     appVersion: 1.16.0
@@ -11,4 +23,4 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/social-distancing-retail-0.1.0/social-distancing-retail-0.1.0.tgz
     version: 0.1.0
-generated: "2022-04-21T00:15:16.378471141Z"
+generated: "2022-08-18T11:59:19.958054615Z"
