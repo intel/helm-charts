@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: multimodal-data-visualization-streaming-deployment
+  labels:
+    app: multimodal-data-visualization-streaming
+spec:
+  selector:
+    matchLabels:
+      app: multimodal-data-visualization-streaming
+  strategy:
+    type: Recreate    
+  template:
+    metadata:
+      labels:
+        app: multimodal-data-visualization-streaming
+    spec:
+       hostname: multimodal-data-visualization-streaming
+       securityContext:
+         runAsUser: 1999
+         runAsGroup: 1999
+         fsGroup: 1999
+       containers:
+       - image: "{{ .Values.visualizationStreamingImage.repository }}:{{ .Values.visualizationStreamingImage.tag | default .Chart.AppVersion }}"
+         imagePullPolicy: {{ .Values.visualizationStreamingImage.pullPolicy }}       
+         name: deployment   
+         ports:
+         - containerPort: 8082
+           name: ui-default-port
+         - containerPort: 8443
+           name: signalling-port
+         - containerPort: 8083
+           name: react-port
+         env:
+         - name: MODE
+           value: "{{ .Values.env.MODE }}"
+         volumeMounts:
+         - mountPath: /etc/nginx/sites-enabled
+           name: multimodal-data-visualization-streaming-tmpfs0
+         - mountPath: /usr/share/nginx
+           name: multimodal-data-visualization-streaming-tmpfs1
+         - mountPath: /var/log/nginx
+           name: multimodal-data-visualization-streaming-tmpfs2
+         - mountPath: /var/cache/nginx
+           name: multimodal-data-visualization-streaming-tmpfs3
+         - mountPath: /var/lib/nginx
+           name: multimodal-data-visualization-streaming-tmpfs4
+         - mountPath: /run
+           name: multimodal-data-visualization-streaming-tmpfs5
+       volumes:
+         - name: multimodal-data-visualization-streaming-tmpfs0
+           emptyDir: {}
+         - name: multimodal-data-visualization-streaming-tmpfs1
+           emptyDir: {}
+         - name: multimodal-data-visualization-streaming-tmpfs2
+           emptyDir: {}
+         - name: multimodal-data-visualization-streaming-tmpfs3
+           emptyDir: {}
+         - name: multimodal-data-visualization-streaming-tmpfs4
+           emptyDir: {}
+         - name: multimodal-data-visualization-streaming-tmpfs5
+           emptyDir: {}
