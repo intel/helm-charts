@@ -12,6 +12,18 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/evam-0.7.2/evam-0.7.2.tgz
     version: 0.7.2
+  multimodal-data-visualization:
+  - apiVersion: v2
+    appVersion: 3.0.0
+    created: "2022-08-19T09:38:58.268922642Z"
+    description: A Helm chart for deploying multimodal data visualization service
+      in k8s
+    digest: 2a979a00f7e1adaeb3a45af7380f57f07b8dfc4709ba1c550557e27dcd3da495
+    name: multimodal-data-visualization
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/multimodal-data-visualization-3.0.0/multimodal-data-visualization-3.0.0.tgz
+    version: 3.0.0
   social-distancing-retail:
   - apiVersion: v2
     appVersion: 1.16.0
@@ -23,4 +35,4 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/social-distancing-retail-0.1.0/social-distancing-retail-0.1.0.tgz
     version: 0.1.0
-generated: "2022-08-18T11:59:19.958054615Z"
+generated: "2022-08-19T09:38:58.268928642Z"
