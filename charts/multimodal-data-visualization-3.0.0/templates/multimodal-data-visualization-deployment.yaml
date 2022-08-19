@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "chart.fullname" . }}-deployment
+  labels:
+    {{- include "chart.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "chart.selectorLabels" . | nindent 6 }}    
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "chart.selectorLabels" . | nindent 8 }}
+    spec:
+      hostname: multimodal-data-visualization      
+      containers:
+      - image: "{{ .Values.visualizationImage.repository }}:{{ .Values.visualizationImage.tag | default .Chart.AppVersion }}"
+        imagePullPolicy: {{ .Values.visualizationImage.pullPolicy }}
+        name: deployment   
+        env:
+        - name:  MODE
+          value: "{{ .Values.env.MODE }}"
+        - name: HOST_IP
+          value: "{{ .Values.env.HOST_IP }}"
+        - name: KUBERNETES_ENV
+          value: "{{ .Values.env.KUBERNETES_ENV }}"  
+        ports:
+        - containerPort: 3000
+          name: grafana-port
+        volumeMounts:
+        - mountPath: /tmp
+          name: multimodal-data-visualization
+      volumes:
+        - name: multimodal-data-visualization
+          persistentVolumeClaim:
+            claimName: multimodal-data-visualization
+ 

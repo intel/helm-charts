@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "chart.fullname" . }}-deployment
+  labels:
+    {{- include "chart.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - name: grafana-port
+      port: 3000
+      targetPort: 3000
+      nodePort: 30000
+  selector:
+    {{- include "chart.selectorLabels" . | nindent 4 }}
