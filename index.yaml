@@ -12,6 +12,39 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/evam-0.7.2/evam-0.7.2.tgz
     version: 0.7.2
+  intel-device-plugins-operator:
+  - apiVersion: v2
+    appVersion: 0.24.0
+    created: "2022-09-14T13:48:24.053709006+03:00"
+    description: A Helm chart for Intel Device Plugins Operator for Kubernetes
+    digest: a3406200ab757c562860d794824a701a5104468e2cbf9e5ea3d7a05a81858edb
+    name: intel-device-plugins-operator
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/operator/intel-device-plugins-operator-0.1.0.tgz
+    version: 0.1.0
+  intel-device-plugins-qat:
+  - apiVersion: v2
+    appVersion: 0.24.0
+    created: "2022-09-14T13:48:24.054039468+03:00"
+    description: A Helm chart for Intel QAT Device Plugin
+    digest: 7bfdedbb1cc23c616ba280f8f4fb7bb76db6b50182451a7746e4ac259d6ef79f
+    name: intel-device-plugins-qat
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/qat/intel-device-plugins-qat-0.1.0.tgz
+    version: 0.1.0
+  intel-device-plugins-sgx:
+  - apiVersion: v2
+    appVersion: 0.24.0
+    created: "2022-09-14T13:48:24.054331138+03:00"
+    description: A Helm chart for Intel SGX Device Plugin
+    digest: 9a4af9518e11d61d33a271cb37560a26b6925885ba3789b9908a67eba5d53f44
+    name: intel-device-plugins-sgx
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/sgx/intel-device-plugins-sgx-0.1.0.tgz
+    version: 0.1.0
   multimodal-data-visualization:
   - apiVersion: v2
     appVersion: 3.0.0
@@ -24,15 +57,4 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/multimodal-data-visualization-3.0.0/multimodal-data-visualization-3.0.0.tgz
     version: 3.0.0
-  social-distancing-retail:
-  - apiVersion: v2
-    appVersion: 1.16.0
-    created: "2022-04-21T00:15:16.378449841Z"
-    description: A Helm chart for Kubernetes
-    digest: b9427901757c38cd99e6b97d4dc10f66bcf261714c639766778deabc3dc04c1d
-    name: social-distancing-retail
-    type: application
-    urls:
-    - https://github.com/intel/helm-charts/releases/download/social-distancing-retail-0.1.0/social-distancing-retail-0.1.0.tgz
-    version: 0.1.0
-generated: "2022-08-19T09:38:58.268928642Z"
+generated: "2022-09-14T13:48:24.053061165+03:00"
