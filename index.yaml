@@ -12,6 +12,39 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/evam-0.7.2/evam-0.7.2.tgz
     version: 0.7.2
+  intel-device-plugins-operator:
+  - apiVersion: v2
+    appVersion: 0.24.0
+    created: "2022-09-19T09:50:01.173119064Z"
+    description: A Helm chart for Intel Device Plugins Operator for Kubernetes
+    digest: 09c0b265629f3b5d2f11121f98a7fd37def34104f6fb4560708f5371c85cc4bf
+    name: intel-device-plugins-operator
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/intel-device-plugins-operator-0.24.0/intel-device-plugins-operator-0.24.0.tgz
+    version: 0.24.0
+  intel-device-plugins-qat:
+  - apiVersion: v2
+    appVersion: 0.24.0
+    created: "2022-09-19T09:50:01.368419005Z"
+    description: A Helm chart for Intel QAT Device Plugin
+    digest: 4b2c54a2ca6a71e1396a6a220c42a48239eafdb37141ad868b89b9ecfb1f4553
+    name: intel-device-plugins-qat
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/intel-device-plugins-qat-0.24.0/intel-device-plugins-qat-0.24.0.tgz
+    version: 0.24.0
+  intel-device-plugins-sgx:
+  - apiVersion: v2
+    appVersion: 0.24.0
+    created: "2022-09-19T09:50:01.559751288Z"
+    description: A Helm chart for Intel SGX Device Plugin
+    digest: 3ceb2651b06a010a74c9b293db794cf432433d6b6d71ca979ce932125a8314e5
+    name: intel-device-plugins-sgx
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/intel-device-plugins-sgx-0.24.0/intel-device-plugins-sgx-0.24.0.tgz
+    version: 0.24.0
   multimodal-data-visualization:
   - apiVersion: v2
     appVersion: 3.0.0
@@ -24,4 +57,4 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/multimodal-data-visualization-3.0.0/multimodal-data-visualization-3.0.0.tgz
     version: 3.0.0
-generated: "2022-08-19T09:38:58.268928642Z"
+generated: "2022-09-19T09:50:01.559757088Z"
