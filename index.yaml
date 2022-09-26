@@ -45,6 +45,18 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/intel-device-plugins-sgx-0.24.0/intel-device-plugins-sgx-0.24.0.tgz
     version: 0.24.0
+  load-generator:
+  - apiVersion: v1
+    appVersion: "1.0"
+    created: "2022-09-26T07:16:14.866074186Z"
+    description: A Helm chart that uses k6 to generate load
+    digest: e0010687abe0af90a79efda36939511201935f707a3ea60af4a9a3d4e28080f0
+    maintainers:
+    - name: sudermanjr
+    name: load-generator
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/load-generator-0.1.2/load-generator-0.1.2.tgz
+    version: 0.1.2
   multimodal-data-visualization:
   - apiVersion: v2
     appVersion: 3.0.0
@@ -57,4 +69,4 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/multimodal-data-visualization-3.0.0/multimodal-data-visualization-3.0.0.tgz
     version: 3.0.0
-generated: "2022-09-19T09:50:01.559757088Z"
+generated: "2022-09-26T07:16:14.866180286Z"
