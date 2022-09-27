@@ -1,8 +1,9 @@
 # Intel Device Plugins Operator Helm Chart
 
+[Intel Device Plugins for Kubernetes](https://github.com/intel/intel-device-plugins-for-kubernetes) Helm charts for installing the operator. Operator installation is manadtory after which each device plugin can be installed via its own Helm chart.
 ## Prerequisites
-- cert-manager
-- NFD charts [optional]
+- [cert-manager](https://cert-manager.io/docs/installation/helm)
+- [Node Feature Discovery NFD](https://kubernetes-sigs.github.io/node-feature-discovery/master/get-started/deployment-and-usage.html) [optional]
 
 ## Get Helm Repository Info
 ```
