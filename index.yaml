@@ -15,6 +15,16 @@ entries:
   intel-device-plugins-operator:
   - apiVersion: v2
     appVersion: 0.24.0
+    created: "2022-09-27T14:06:41.514837304Z"
+    description: A Helm chart for Intel Device Plugins Operator for Kubernetes
+    digest: 8b680c3594095a05033347d7e848e96d5d74820eed8c65b12dd18a78ad83af97
+    name: intel-device-plugins-operator
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/intel-device-plugins-operator-0.24.1-helm.0/intel-device-plugins-operator-0.24.1-helm.0.tgz
+    version: 0.24.1-helm.0
+  - apiVersion: v2
+    appVersion: 0.24.0
     created: "2022-09-19T09:50:01.173119064Z"
     description: A Helm chart for Intel Device Plugins Operator for Kubernetes
     digest: 09c0b265629f3b5d2f11121f98a7fd37def34104f6fb4560708f5371c85cc4bf
@@ -26,6 +36,16 @@ entries:
   intel-device-plugins-qat:
   - apiVersion: v2
     appVersion: 0.24.0
+    created: "2022-09-27T14:06:41.808467461Z"
+    description: A Helm chart for Intel QAT Device Plugin
+    digest: ee620394d1f145d97efa1f34132670bce671ebb5a42112a5e39fa42afe8bf8d0
+    name: intel-device-plugins-qat
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/intel-device-plugins-qat-0.24.1-helm.0/intel-device-plugins-qat-0.24.1-helm.0.tgz
+    version: 0.24.1-helm.0
+  - apiVersion: v2
+    appVersion: 0.24.0
     created: "2022-09-19T09:50:01.368419005Z"
     description: A Helm chart for Intel QAT Device Plugin
     digest: 4b2c54a2ca6a71e1396a6a220c42a48239eafdb37141ad868b89b9ecfb1f4553
@@ -35,6 +55,16 @@ entries:
     - https://github.com/intel/helm-charts/releases/download/intel-device-plugins-qat-0.24.0/intel-device-plugins-qat-0.24.0.tgz
     version: 0.24.0
   intel-device-plugins-sgx:
+  - apiVersion: v2
+    appVersion: 0.24.0
+    created: "2022-09-27T14:06:42.093229628Z"
+    description: A Helm chart for Intel SGX Device Plugin
+    digest: 83b19e1e9636418ba0cce2c1e2ddc2103ca0ae1d766949908ae4c26bcd9604b4
+    name: intel-device-plugins-sgx
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/intel-device-plugins-sgx-0.24.1-helm.0/intel-device-plugins-sgx-0.24.1-helm.0.tgz
+    version: 0.24.1-helm.0
   - apiVersion: v2
     appVersion: 0.24.0
     created: "2022-09-19T09:50:01.559751288Z"
@@ -69,4 +99,4 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/multimodal-data-visualization-3.0.0/multimodal-data-visualization-3.0.0.tgz
     version: 3.0.0
-generated: "2022-09-26T07:16:14.866180286Z"
+generated: "2022-09-27T14:06:42.093246829Z"
