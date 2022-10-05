@@ -1,0 +1,13 @@
+gpu:
+  metadata:
+    name: gpudeviceplugin-sample
+  spec:
+    image: intel/intel-gpu-plugin:0.24.0
+    initImage: intel/intel-gpu-initcontainer:0.24.0
+    sharedDevNum: 1
+    logLevel: 2
+    resourceManager: false
+    enableMonitoring: true
+    allocationPolicy: "none"
+    nodeSelector:
+      intel.feature.node.kubernetes.io/gpu: 'true'

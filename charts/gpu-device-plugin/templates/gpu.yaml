@@ -1,0 +1,19 @@
+{{- /*
+based on
+deployments/operator/samples/deviceplugin_v1_gpudeviceplugin.yaml
+*/}}
+
+apiVersion: deviceplugin.intel.com/v1
+kind: GpuDevicePlugin
+metadata:
+  name: {{ .Values.gpu.metadata.name }}
+spec:
+  image: {{ .Values.gpu.spec.image }}
+  initImage: {{ .Values.gpu.spec.initImage }}
+  logLevel:  {{ .Values.gpu.spec.logLevel }}
+  sharedDevNum: {{ .Values.gpu.spec.sharedDevNum }}
+  resourceManager: {{ .Values.gpu.spec.resourceManager }}
+  enableMonitoring: {{ .Values.gpu.spec.enableMonitoring }}
+  preferredAllocationPolicy: {{ .Values.gpu.spec.allocationPolicy }}
+
+  nodeSelector: {{- .Values.gpu.spec.nodeSelector | toYaml | nindent 4 }}
