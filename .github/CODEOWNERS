@@ -1,0 +1,17 @@
+# Syntax and details are here: https://help.github.com/articles/about-codeowners/
+#
+# Global code ownership, fallback
+*                   @mythi @poussa @softwarerecipes
+
+# CI/CD
+.github/workflows/ @mythi @poussa @softwarerecipes
+
+# charts
+/charts/device-plugin-operator/  @mythi @poussa
+/charts/evam-0.7.2/  @softwarerecipes
+/charts/gpu-device-plugin/  @mythi @poussa
+/charts/load-generator-0.1.2/  @softwarerecipes 
+/charts/multimodal-data-visualization-3.0.0/  @softwarerecipes
+/charts/qat-device-plugin/ @mythi @poussa
+/charts/sgx-device-plugin/ @mythi @poussa
+

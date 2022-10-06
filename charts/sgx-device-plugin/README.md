@@ -38,6 +38,3 @@ You may also run `helm show values` on this chart's dependencies for additional 
 | `enclaveLimit` | `110` |
 | `provisionLimit` | `110` |
 | `logLevel` | `4` |
-
-
-
