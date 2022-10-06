@@ -12,6 +12,17 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/evam-0.7.2/evam-0.7.2.tgz
     version: 0.7.2
+  intel-device-plugins-gpu:
+  - apiVersion: v2
+    appVersion: 0.24.0
+    created: "2022-10-06T09:37:44.449676684Z"
+    description: A Helm chart for Intel GPU Device Plugin
+    digest: 24ae7d248d760d58c303a1e78f780e1526776d5a4193fb34e42f30dbc0190486
+    name: intel-device-plugins-gpu
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/intel-device-plugins-gpu-0.24.1-helm.0/intel-device-plugins-gpu-0.24.1-helm.0.tgz
+    version: 0.24.1-helm.0
   intel-device-plugins-operator:
   - apiVersion: v2
     appVersion: 0.24.0
@@ -99,4 +110,4 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/multimodal-data-visualization-3.0.0/multimodal-data-visualization-3.0.0.tgz
     version: 3.0.0
-generated: "2022-09-27T14:06:42.093246829Z"
+generated: "2022-10-06T09:37:44.449695485Z"
