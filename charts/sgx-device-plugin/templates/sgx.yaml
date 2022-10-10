@@ -14,3 +14,26 @@ spec:
   provisionLimit: {{ .Values.sgx.spec.provisionLimit }}
   logLevel:  {{ .Values.sgx.spec.logLevel }}
   nodeSelector: {{- .Values.sgx.spec.nodeSelector | toYaml | nindent 4 }}
+---
+{{ if eq .Values.sgx.nodeFeatureRule true }}
+apiVersion: nfd.k8s-sigs.io/v1alpha1
+kind: NodeFeatureRule
+metadata:
+  name: intel-dp-sgx-device
+spec:
+  rules:
+    - name: "intel.sgx"
+      labels:
+        "intel.feature.node.kubernetes.io/sgx": "true"
+      matchFeatures:
+        - feature: cpu.cpuid
+          matchExpressions:
+            SGX: {op: Exists}
+            SGXLC: {op: Exists}
+        - feature: cpu.sgx
+          matchExpressions:
+            enabled: {op: IsTrue}
+        - feature: kernel.config
+          matchExpressions:
+            X86_SGX: {op: Exists}
+{{ end }}
