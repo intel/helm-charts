@@ -12,6 +12,17 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/evam-0.7.2/evam-0.7.2.tgz
     version: 0.7.2
+  evam-dek:
+  - apiVersion: v2
+    appVersion: 0.7.2
+    created: "2022-10-10T11:26:55.138816636Z"
+    description: A Helm chart for edge-video-analytics-microservice and mqtt-broker
+    digest: fa6f4b2e01f22b7060cd6b12b6c0974a83fe1c9e927d2e6c3999f8be8d162d36
+    name: evam-dek
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/evam-dek-1.0.0/evam-dek-1.0.0.tgz
+    version: 1.0.0
   intel-device-plugins-gpu:
   - apiVersion: v2
     appVersion: 0.24.0
@@ -122,4 +133,4 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/tcs-issuer-0.2.0/tcs-issuer-0.2.0.tgz
     version: 0.2.0
-generated: "2022-10-07T10:52:36.907864995Z"
+generated: "2022-10-10T11:26:55.138834636Z"
