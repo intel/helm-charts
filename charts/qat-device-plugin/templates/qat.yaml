@@ -12,7 +12,7 @@ metadata:
 spec:
   image: {{ .Values.qat.spec.image }}
   {{- if .Values.qat.spec.initImage }}
-    initImage: {{ .Values.qat.spec.initImage }}
+  initImage: {{ .Values.qat.spec.initImage }}
   {{- end }}
   dpdkDriver: {{ .Values.qat.spec.dpdkDriver }}
   kernelVfDrivers:
