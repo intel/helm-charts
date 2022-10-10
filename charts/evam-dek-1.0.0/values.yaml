@@ -1,0 +1,85 @@
+# Copyright (c) 2022 Intel Corporation.
+# SPDX-License-Identifier: MIT
+
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+
+namespace: smartedge-apps
+imagePullPolicy: IfNotPresent
+restartPolicy: Always
+storageClassName: manual
+
+
+env:
+  HTTPS_PROXY: 
+  HTTP_PROXY: 
+  NO_PROXY: 
+
+container:
+  mqtt_broker:
+    name: mqtt-broker
+    image: eclipse-mosquitto
+    tag: 1.6
+  edge_video_analytics_microservice:
+    name: edge-video-analytics-microservice
+    image: intel/edge_video_analytics_microservice
+    tag: 0.7.2
+
+config:
+  edge_video_analytics_microservice:
+    name: evam-service
+    rest_api_port:
+      name: rest-api-port
+      int_port: 8080
+      ext_port: 30409
+    rtsp_port:
+      name: rtsp-port
+      int_port: 8554
+      ext_port: 30410
+  mqtt_broker_service:
+    name: mqtt-broker-service
+    mqtt_broker_port:
+      name: mqtt-broker-port
+      port: 1883
+
+volumes:
+  evam_pvc1:
+    pvc_name: evam-vol1
+    pv_name: evam-vol1-pv
+    size: 1Gi
+    location: /home/pipeline-server/models/
+    hostpath: "/var/lib/smartedge/evam/models/"
+  evam_pvc2:
+    pvc_name: evam-vol2
+    pv_name: evam-vol2-pv
+    size: 10Mi
+    location: /home/pipeline-server/pipelines/
+    hostpath: "/var/lib/smartedge/evam/pipelines/"
+  evam_pvc3:
+    pvc_name: evam-vol3
+    pv_name: evam-vol3-pv
+    size: 10Mi
+    location: /home/pipeline-server/resources/
+    hostpath: "/var/lib/smartedge/evam/resources/"
+  mqtt_pvc:
+    pvc_name: mqtt-vol
+    pv_name: mqtt-vol-pv
+    size: 10Mi
+    location: /mosquitto/
+    hostpath: "/var/lib/smartedge/evam/mosquitto/"
