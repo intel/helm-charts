@@ -1,0 +1,135 @@
+# Copyright (c) 2022 Intel Corporation
+# SPDX-License-Identifier: MIT
+
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.config.edge_video_analytics_microservice.name }}
+  labels:
+    app: evam
+  namespace: {{ .Values.namespace }}
+spec:
+  type: NodePort
+  ports:
+  - name: {{ .Values.config.edge_video_analytics_microservice.rest_api_port.name }}
+    port: {{ .Values.config.edge_video_analytics_microservice.rest_api_port.int_port }}
+    targetPort: {{ .Values.config.edge_video_analytics_microservice.rest_api_port.int_port }}
+    nodePort: {{ .Values.config.edge_video_analytics_microservice.rest_api_port.ext_port }}
+  - name: {{ .Values.config.edge_video_analytics_microservice.rtsp_port.name }}
+    port: {{ .Values.config.edge_video_analytics_microservice.rtsp_port.int_port }}
+    targetPort: {{ .Values.config.edge_video_analytics_microservice.rtsp_port.int_port }}
+    nodePort: {{ .Values.config.edge_video_analytics_microservice.rtsp_port.ext_port }}
+  selector:
+    app: evam
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.config.mqtt_broker_service.name }}
+  labels:
+    app: evam
+  namespace: {{ .Values.namespace }}
+spec:
+  ports:
+  - name: {{ .Values.config.mqtt_broker_service.mqtt_broker_port.name }}
+    port: {{ .Values.config.mqtt_broker_service.mqtt_broker_port.port }}
+    targetPort: {{ .Values.config.mqtt_broker_service.mqtt_broker_port.port }}
+  selector:
+    app: evam
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: edge-video-analytics-microservice-with-mqtt
+  labels:
+     app: evam
+  namespace: {{ .Values.namespace }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: evam
+  template:
+    metadata:
+      labels:
+        app: evam
+    spec:
+      nodeSelector:
+        feature.node.kubernetes.io/cpu-cpuid.AVX512VNNI: "true"
+        feature.node.kubernetes.io/system-os_release.ID: "ubuntu"
+      containers:
+        - name: {{ .Values.container.mqtt_broker.name }}
+          image: {{ .Values.container.mqtt_broker.image }}:{{ .Values.container.mqtt_broker.tag }}
+          imagePullPolicy: {{ .Values.imagePullPolicy }}
+          ports:
+            - containerPort: {{ .Values.config.mqtt_broker_service.mqtt_broker_port.port }}
+          volumeMounts:
+            #- mountPath: /mosquitto/config
+            - mountPath: {{ .Values.volumes.mqtt_pvc.location }}
+              name: mqtt-pvc
+        - name: {{ .Values.container.edge_video_analytics_microservice.name }}
+          image: {{ .Values.container.edge_video_analytics_microservice.image }}:{{ .Values.container.edge_video_analytics_microservice.tag }}
+          #image: evam_dek:latest
+          imagePullPolicy: {{ .Values.imagePullPolicy }}
+          ports:
+            - containerPort: {{ .Values.config.edge_video_analytics_microservice.rest_api_port.int_port }}
+            - containerPort: {{ .Values.config.edge_video_analytics_microservice.rtsp_port.int_port }}
+          securityContext:
+            privileged: true
+          tty: true
+          command:
+            - ./run.sh
+          env:
+            - name: ENABLE_RTSP
+              value: "true"
+            - name: HTTPS_PROXY
+              value: {{ .Values.env.HTTPS_PROXY }}
+            - name: HTTP_PROXY
+              value: {{ .Values.env.HTTP_PROXY }}
+            - name: NO_PROXY
+              value: {{ .Values.env.NO_PROXY }}
+            - name: RTSP_PORT
+              value: {{ .Values.config.edge_video_analytics_microservice.rtsp_port.int_port | squote }}
+            - name: RUN_MODE
+              value: EVA
+          volumeMounts:
+            - mountPath: {{ .Values.volumes.evam_pvc1.location }}
+              name: evam-pvc1
+            - mountPath: {{ .Values.volumes.evam_pvc2.location }}
+              name: evam-pvc2 
+            - mountPath: {{ .Values.volumes.evam_pvc3.location }}
+              name: evam-pvc3
+          # what about device cgroups rules and devices tab
+      restartPolicy: Always
+      volumes:
+        - name: evam-pvc1
+          persistentVolumeClaim:
+            claimName: {{ .Values.volumes.evam_pvc1.pvc_name }}
+        - name: evam-pvc2
+          persistentVolumeClaim:
+            claimName: {{ .Values.volumes.evam_pvc2.pvc_name }}
+        - name: evam-pvc3
+          persistentVolumeClaim:
+            claimName: {{ .Values.volumes.evam_pvc3.pvc_name }}
+        - name: mqtt-pvc
+          persistentVolumeClaim:
+            claimName: {{ .Values.volumes.mqtt_pvc.pvc_name }}
