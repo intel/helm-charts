@@ -1,0 +1,138 @@
+# Name of the plugin to deploy, one of : "null", "kmra", "isecl".
+# This must be selected on chart installation
+plugin: ""
+
+serviceAccountName: tac-svcact
+metricsPort: 8443
+replicas: 1
+
+# This is the default image used by all the containers (controller and plugins).
+# Could be overwritten by providing container specific 'image' section.
+image:
+  hub: docker.io
+  name: intel/trusted-attestation-controller
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag:
+
+# controller/manager container configuration
+controller:
+  # default to .image
+  image:
+    hub:
+
+  healthProbePort: 8081
+  livenessProbe:
+    initialDelaySeconds: 15
+    periodSeconds: 20
+  readinessProbe:
+    initialDelaySeconds: 5
+    periodSeconds: 10
+  
+  limits:
+    cpu: 200m
+    memory: 100Mi
+  requests:
+    cpu: 100m
+    memory: 20Mi
+
+# Configuration for null-plugin
+nullPlugin:
+  name: null-plugin
+
+  args:
+    - --plugin-name=null
+    - --plugin-socket-path=/plugins/null.sock
+
+  command:
+  - /null-plugin
+  
+  # defaults to .image
+  image:
+    hub:
+
+  limits:
+    cpu: 500m
+    memory: 100Mi
+  requests:
+    cpu: 100m
+    memory: 20Mi
+
+# Configuration for kmra-plugin
+kmraPlugin:
+  name: kmra-plugin
+
+  args:
+    - --plugin-name=kmra
+    - --plugin-socket-path=/plugins/kmra.sock
+
+  command:
+    - /kmra-plugin
+
+  # defaults to .image
+  image:
+    hub:
+
+  limits:
+    cpu: 500m
+    memory: 100Mi
+  requests:
+    cpu: 100m
+    memory: 20Mi
+
+  # KMRA server configuration must be set on chat installation
+  server:
+    url: "" # KMRA server url
+    tls:
+      caCrt: "" # CA certificate (base64)
+      clientCrt: "" # Client private key (base64)
+      clientKey: "" # Client certificate (base64)
+
+# Configuration for isecl-plugin
+iseclPlugin:
+  name: isecl-plugin
+  
+  args:
+    - --plugin-name=isecl
+    - --plugin-socket-path=/plugins/isecl.sock
+  
+  command:
+    - /isecl-plugin
+
+  # defaults to .image
+  image:
+    hub:
+
+  limits:
+    cpu: 500m
+    memory: 100Mi
+  requests:
+    cpu: 100m
+    memory: 20Mi
+  
+  kbs:
+    # KBS server hostname/ip-address
+    host: localhost
+    port: 9443
+    tls:
+      caCert: # base64-encoded CA certificate
+      clientKey: # base64-encoded client key
+      clientCert: # base64-encoded client certificate
+    token: # Bearer token to access KBS API
+  # SGX Quote Verification Service
+  sqvs:
+    host:
+    port: 9447
+  # KMIP server configuration
+  kmip:
+    ip:
+    hostname: localhost
+    port: 5696
+    # base64 encoded username and password to access the server
+    username: ""
+    password: ""
+    # tls configuration
+    tls:
+      caCert: # base64-encoded CA certificate
+      clientKey: # base64-encoded client key
+      clientCert: # base64-encoded client certificate

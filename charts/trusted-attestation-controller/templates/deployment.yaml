@@ -1,0 +1,305 @@
+{{ $plugins := list "null" "kmra" "isecl" }}
+{{- if not .Values.plugin }}
+{{ $message := printf "`No plugin name selected. Available plugins are: %v" $plugins }}
+{{- fail $message }}
+{{- else if not (has .Values.plugin $plugins) }}
+{{ $message := printf "Invalid plugin name: %q. Valid plugins are: %v" .Values.plugin $plugins }}
+{{- fail $message }}
+{{- end }}
+
+
+{{- /*
+Volume mounts generic to all containers
+*/}}
+{{ define "volumeMounts" -}}
+- mountPath: /plugins
+  name: plugin-socket-dir
+- mountPath: /registration
+  name: registry-socket-dir
+{{- end }}
+
+{{- /*
+NULL plugin container definition
+*/}}
+
+{{ define "nullPluginContainer" -}}
+{{ $image := merge .Values.nullPlugin.image .Values.image -}}
+{{ $imageTag := default .Chart.AppVersion $image.tag -}}
+{{ with .Values.nullPlugin -}}
+- args:
+  {{- toYaml .args | nindent 2 }}
+  - --registry-socket-path=/registration/controller.sock
+  command:
+  {{- toYaml .command | nindent 2 }}
+  image: "{{ $image.hub }}/{{ $image.name }}:{{ $imageTag }}"
+  name: {{ .name }}
+  resources:
+    limits:
+      cpu: {{ .limits.cpu }}
+      memory: {{ .limits.memory }}
+    requests:
+      cpu: {{ .requests.cpu }}
+      memory: {{ .requests.memory }}
+{{- end }}
+  volumeMounts:
+  {{- include "volumeMounts" .| nindent 2 }}
+{{- end }}
+
+{{- /*
+KMRA plugin container definition
+*/}}
+
+{{ define "kmraPluginContainer" -}}
+{{ $image := merge .Values.kmraPlugin.image .Values.image -}}
+{{ $imageTag := default .Chart.AppVersion $image.tag -}}
+{{- with .Values.kmraPlugin -}}
+- args:
+  {{- toYaml .args | nindent 2 }}
+  - --registry-socket-path=/registration/controller.sock
+  command:
+  {{- toYaml .command | nindent 2 }}
+  envFrom:
+  - configMapRef:
+      name: kmra-config
+  image: "{{ $image.hub }}/{{ $image.name }}:{{ $imageTag }}"
+  name: {{ .name }}
+  resources:
+    limits:
+      cpu: {{ .limits.cpu }}
+      memory: {{ .limits.memory }}
+    requests:
+      cpu: {{ .requests.cpu }}
+      memory: {{ .requests.memory }}
+{{- end }}
+  volumeMounts:
+  {{- include "volumeMounts" .| nindent 2 }}
+  - name: kmra-secrets
+    mountPath: /certs/
+    readOnly: true
+{{- end }}
+
+{{- /*
+IsecL plugin container definition
+*/}}
+
+{{ define "iseclPluginContainer" -}}
+{{ $image := merge .Values.iseclPlugin.image .Values.image -}}
+{{ $imageTag := default .Chart.AppVersion $image.tag -}}
+{{ with .Values.iseclPlugin -}}
+- args:
+  {{- toYaml .args | nindent 2 }}
+  - --registry-socket-path=/registration/controller.sock
+  command:
+  {{- toYaml .command | nindent 2 }}
+  image: "{{ $image.hub }}/{{ $image.name }}:{{ $imageTag }}"
+  name: {{ .name }}
+  resources:
+    limits:
+      cpu: {{ .limits.cpu }}
+      memory: {{ .limits.memory }}
+    requests:
+      cpu: {{ .requests.cpu }}
+      memory: {{ .requests.memory }}
+{{- end }}
+  volumeMounts:
+  {{- include "volumeMounts" .| nindent 2 }}
+  - name: tac-config
+    mountPath: /etc/tac
+    readOnly: true
+  - name: kmip-secrets
+    mountPath: /etc/tac/kmip-certs
+    readOnly: true
+  - name: kbs-secrets
+    mountPath: /etc/tac/kbs-certs
+    readOnly: true
+{{- end }}
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    control-plane: controller-manager
+  name: tac-controller
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: {{ .Values.replicas }}
+  selector:
+    matchLabels:
+      control-plane: controller-manager
+  template:
+    metadata:
+      labels:
+        control-plane: controller-manager
+    spec:
+      containers:
+      - args:
+        - --leader-elect
+        - --registration-path=/registration/controller.sock
+        - --plugin-name={{ .Values.plugin }}
+        command:
+        - /manager
+        {{- $image := merge .Values.controller.image .Values.image -}}
+        {{- $imageTag := default .Chart.AppVersion $image.tag -}}
+      {{- with .Values.controller }}
+        image: "{{ $image.hub }}/{{ $image.name }}:{{ $imageTag }}"
+        imagePullPolicy: {{ .image.PullPolicy }}
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: {{ .healthProbePort }}
+          initialDelaySeconds: {{ .livenessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .livenessProbe.periodSeconds }}
+        name: manager
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: {{ .healthProbePort }}
+          initialDelaySeconds: {{ .readinessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .readinessProbe.initialDelaySeconds }}
+        resources:
+          limits:
+            cpu: {{ .limits.cpu }}
+            memory: {{ .limits.memory }}
+          requests:
+            cpu: {{ .requests.cpu }}
+            memory: {{ .requests.memory }}
+        securityContext:
+          allowPrivilegeEscalation: false
+        volumeMounts:
+        {{- include "volumeMounts" . | nindent 8 }}
+      {{- end }}
+{{-
+/* Plugin container(s) definition starts here.
+Currently we support single plugin. When the TAC supports multiple plugins
+then just  remove { else } to add multiple plugin containers.
+*/ -}}
+      {{- if eq .Values.plugin "null" }}
+      {{- include "nullPluginContainer" . | nindent 6 }}
+      {{- else if eq .Values.plugin "kmra" }}
+      {{- include "kmraPluginContainer" . | nindent 6 }}
+      {{- else if eq .Values.plugin "isecl" }}
+      {{- include "iseclPluginContainer" . | nindent 6 }}
+      {{- end }}
+      initContainers:
+      - command:
+        - sh
+        - -c
+        - set -x; chown -R 5000:5000 /registration /plugins
+        image: busybox
+        name: decode-secrets
+        volumeMounts:
+        {{- include "volumeMounts" . | nindent 8 }}
+      serviceAccountName: {{ .Values.serviceAccountName }}
+      terminationGracePeriodSeconds: 10
+      volumes:
+      - emptyDir: {}
+        name: plugin-socket-dir
+      - emptyDir: {}
+        name: registry-socket-dir
+      {{- if eq .Values.plugin "kmra" }}
+      - name: kmra-secrets
+        secret:
+          secretName: kmra-secrets
+      {{- else if eq .Values.plugin "isecl" }}
+      - name: tac-config
+        configMap:
+          name: tac-config
+      - name: kbs-secrets
+        secret:
+          secretName: kbs-secrets
+      - name: kmip-secrets
+        secret:
+          secretName: kmip-secrets
+      {{- end }}
+
+
+{{ if eq .Values.plugin "kmra" }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kmra-config
+  namespace: {{ .Release.Namespace }}
+data:
+  KEY_SERVER: {{ required "A valid kmraPlugin.server.url entry required!" .Values.kmraPlugin.server.url }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: kmra-secrets
+data:
+{{- with .Values.kmraPlugin.server.tls }}
+  ca.crt: {{ required "A valid kmraPlugin.server.tls.caCert entry required!" .caCrt | quote }}
+  client.crt: {{ required "A valid kmraPlugin.server.tls.clientCrt entry required!" .clientCrt | quote }}
+  client.key: {{ required "A valid kmraPlugin.server.tls.clientKey entry required!" .clientKey | quote }}
+{{- end}}
+type: Opaque
+
+{{ else if eq .Values.plugin "isecl" }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tac-config
+  namespace: {{ .Release.Namespace }}
+data:
+  config.yaml: |-
+{{- with .Values.iseclPlugin }}
+    kbs:
+      # KBS server hostname/ip-address
+      host: {{ required "A valid iseclPlugin.kbs.host entry required!" .kbs.host }}
+      port: {{ required "A valid iseclPlugin.kbs.port entry required!" .kbs.port }}
+      # Client Certificate and Privatekey paths
+      # Make sure that the KBS client secrets are mounted
+      # at this path: /etc/tac/kbs-certs
+      caCert: "/etc/tac/kbs-certs/ca.crt"
+      clientKey: "/etc/tac/kbs-certs/client.key"
+      clientCert: "/etc/tac/kbs-certs/client.crt"
+      # Bearer token to access KBS API
+      token: {{ required "A valid iseclPlugin.kbs.token entry required!" .kbs.token }}
+    # SGX Quote Verification Service
+    sqvs:
+      host: {{ required "A valid iseclPlugin.sqvs.host entry required!" .sqvs.host }}
+      host: {{ required "A valid iseclPlugin.sqvs.port entry required!" .sqvs.port }}
+    kmip:
+      # Server IP address
+      ip: {{ required "A valid iseclPlugin.kmip.ip entry required!" .kmip.ip }}
+      # Server hostname
+      hostname: {{ .kmip.hostname }}
+      # Server port number defaults to 5696
+      port: {{ .kmip.port }}
+      # base64 encoded username and password to access the server
+      username: {{ .kmip.username }}
+      password: {{ .kmip.password }}
+      # Client Certificate and Privatekey paths
+      # Make sure that the KMIP client secrets are mounted
+      # at this path: /etc/tac/kmip-certs
+      caCert: "/etc/tac/kmip-certs/ca.crt"
+      clientKey: "/etc/tac/kmip-certs/client.key"
+      clientCert: "/etc/tac/kmip-certs/client.crt"
+{{- end}}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: kbs-secrets
+data:
+{{- with .Values.iseclPlugin.kbs.tls }}
+  ca.crt: {{ required "A valid .iseclPlugin.kbs.tls.caCrt entry required!" .caCrt | quote }}
+  client.crt: {{ required "A valid .iseclPlugin.kbs.tls.clientCrt entry required!" .clientCrt | quote }}
+  client.key: {{ required "A valid .iseclPlugin.kbs.tls.clientKey entry required!" .clientKey | quote }}
+{{- end}}
+type: Opaque
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: kmip-secrets
+data:
+{{- with .Values.iseclPlugin.kmip.tls }}
+  ca.crt: {{ required "A valid .iseclPlugin.kmip.tls.caCrt entry required!" .caCrt | quote }}
+  client.crt: {{ required "A valid .iseclPlugin.kmip.tls.clientCrt entry required!" .clientCrt | quote }}
+  client.key: {{ required "A valid .iseclPlugin.kmip.tls.clientKey entry required!" .clientKey | quote }}
+{{- end}}
+type: Opaque
+{{ end }}
