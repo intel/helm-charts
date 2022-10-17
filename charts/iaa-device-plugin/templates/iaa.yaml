@@ -1,0 +1,14 @@
+{{- /*
+based on
+deployments/operator/samples/deviceplugin_v1_iaadeviceplugin.yaml
+*/}}
+
+
+apiVersion: deviceplugin.intel.com/v1
+kind: IaaDevicePlugin
+metadata:
+  name: {{ .Values.iaa.metadata.name }}
+spec:
+  sharedDevNum: {{ .Values.iaa.spec.sharedDevNum }}
+  logLevel: {{ .Values.iaa.spec.logLevel }}
+  nodeSelector: {{- .Values.iaa.spec.nodeSelector | toYaml | nindent 4 }}

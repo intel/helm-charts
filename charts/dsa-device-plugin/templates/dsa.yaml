@@ -1,0 +1,14 @@
+{{- /*
+based on
+deployments/operator/samples/deviceplugin_v1_dsadeviceplugin.yaml
+*/}}
+
+
+apiVersion: deviceplugin.intel.com/v1
+kind: DsaDevicePlugin
+metadata:
+  name: {{ .Values.dsa.metadata.name }}
+spec:
+  sharedDevNum: {{ .Values.dsa.spec.sharedDevNum }}
+  logLevel: {{ .Values.dsa.spec.logLevel }}
+  nodeSelector: {{- .Values.dsa.spec.nodeSelector | toYaml | nindent 4 }}
