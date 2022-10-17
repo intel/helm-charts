@@ -1,0 +1,9 @@
+dsa:
+  metadata:
+    name: dsadeviceplugin-sample
+  spec:
+    image: intel/intel-dsa-plugin:0.24.0
+    sharedDevNum: 10
+    logLevel: 4
+    nodeSelector:
+      intel.feature.node.kubernetes.io/dsa: 'true'
