@@ -33,11 +33,8 @@ You may also run `helm show values` on this chart's dependencies for additional 
 
 |parameter| value |
 |---------|-----------|
-| `image` | `intel/intel-sgx-plugin:0.24.1` |
-| `initImage` | `intel/intel-sgx-initcontainer:0.24.1` |
+| `hub` | `intel` |
+| `tag` | `` |
 | `enclaveLimit` | `110` |
 | `provisionLimit` | `110` |
 | `logLevel` | `4` |
-
-
-

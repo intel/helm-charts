@@ -17,12 +17,12 @@ You can execute `helm search repo intel` command to see pulled charts [optional]
 CRDs of the device plugin operator are installed as part of the chart.
 
 ```
-helm install device-plugin-operator intel/device-plugin-operator [flags]
+helm install device-plugin-operator intel/intel-device-plugins-operator [flags]
 ```
 
 ## Upgrade Chart
 ```
-helm upgrade device-plugin-operator intel/device-plugin-operator [flags]
+helm upgrade device-plugin-operator intel/intel-device-plugins-operator [flags]
 ```
 
 ## Uninstall Chart
@@ -43,5 +43,5 @@ You may also run `helm show values` on this chart's dependencies for additional 
 |parameter| value |
 |---------|-----------|
 | `hub` | `intel` |
-| `tag` | `0.24.1` |
+| `tag` | `` |
 | `pullPolicy` | `IfNotPresent` |
