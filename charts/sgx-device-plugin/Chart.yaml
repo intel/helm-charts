@@ -4,3 +4,4 @@ description: A Helm chart for Intel SGX Device Plugin
 type: application
 version: 0.24.1-helm.0
 appVersion: "0.24.0"
+
