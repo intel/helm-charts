@@ -1,0 +1,6 @@
+apiVersion: v2
+name: intel-device-plugins-dsa
+description: A Helm chart for Intel DSA Device Plugin
+type: application
+version: 0.25.0
+appVersion: "0.25.0"
