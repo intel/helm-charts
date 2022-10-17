@@ -1,0 +1,6 @@
+apiVersion: v2
+name: intel-device-plugins-dlb
+description: A Helm chart for Intel DLB Device Plugin
+type: application
+version: 0.25.0
+appVersion: "0.25.0"

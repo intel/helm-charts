@@ -1,4 +1,4 @@
-# Intel GPU Device Plugin Helm Chart
+# Intel DLB Device Plugin Helm Chart
 
 ## Get Helm Repository Info
 ```
@@ -10,23 +10,23 @@ You can execute `helm search repo intel` command to see pulled charts [optional]
 
 ## Install Helm Chart
 ```
-helm install gpu-device-plugin intel/gpu-device-plugin [flags]
+helm install dlb-device-plugin intel/dlb-device-plugin [flags]
 ```
 ## Upgrade Chart
 ```
-helm upgrade gpu-device-plugin intel/gpu-device-plugin [flags]
+helm upgrade dlb-device-plugin intel/dlb-device-plugin [flags]
 ```
 
 ## Uninstall Chart
 ```
-helm uninstall gpu-device-plugin
+helm uninstall dlb-device-plugin
 ```
 
 ## Configuration
 See [Customizing the Chart Before Installing](https://helm.sh/docs/intro/using_helm/#customizing-the-chart-before-installing). To see all configurable options with detailed comments:
 
 ```console
-helm show values intel/gpu-device-plugin
+helm show values intel/dlb-device-plugin
 ```
 
 You may also run `helm show values` on this chart's dependencies for additional options.
@@ -35,8 +35,4 @@ You may also run `helm show values` on this chart's dependencies for additional 
 |---------|-----------|
 | `hub` | `intel` |
 | `tag` | `` |
-| `sharedDevNum` | `1` |
-| `resourceManager` | `false` |
-| `enableMonitoring` | `true` |
-| `allocationPolicy` | `none` |
-| `logLevel` | `2` |
+| `logLevel` | `4` |

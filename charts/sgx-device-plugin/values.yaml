@@ -1,13 +1,18 @@
-sgx:
-  metadata:
-    name: sgxdeviceplugin-sample
-  spec:
-    image: intel/intel-sgx-plugin:0.24.1
-    initImage: intel/intel-sgx-initcontainer:0.24.1
-    enclaveLimit: 110
-    provisionLimit: 110
-    logLevel: 4
-    nodeSelector:
-      intel.feature.node.kubernetes.io/sgx: 'true'
+name: sgxdeviceplugin-sample
 
-  nodeFeatureRule: false
+image:
+  hub: intel
+  tag: ""
+
+initImage:
+  hub: intel
+  tag: ""
+
+enclaveLimit: 110
+provisionLimit: 110
+logLevel: 4
+
+nodeSelector:
+  intel.feature.node.kubernetes.io/sgx: 'true'
+
+nodeFeatureRule: false

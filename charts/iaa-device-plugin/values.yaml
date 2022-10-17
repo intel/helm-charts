@@ -1,0 +1,17 @@
+name: iaadeviceplugin-sample
+
+image:
+  hub: intel  
+  tag: ""
+
+initImage:
+  hub: intel   
+  tag: ""
+
+sharedDevNum: 10
+logLevel: 4
+
+nodeSelector:
+  intel.feature.node.kubernetes.io/iaa: 'true'
+
+nodeFeatureRule: false
