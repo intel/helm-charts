@@ -7,8 +7,7 @@ apiVersion: deviceplugin.intel.com/v1
 kind: QatDevicePlugin
 metadata:
   name: {{ .Values.qat.metadata.name }}
-  annotations:
-    {{ toYaml .Values.qat.metadata.annotations | indent 4 }}
+  annotations: {{ toYaml .Values.qat.metadata.annotations | nindent 4 }}
 spec:
   image: {{ .Values.qat.spec.image }}
   {{- if .Values.qat.spec.initImage }}

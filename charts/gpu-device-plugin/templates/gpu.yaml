@@ -7,6 +7,7 @@ apiVersion: deviceplugin.intel.com/v1
 kind: GpuDevicePlugin
 metadata:
   name: {{ .Values.gpu.metadata.name }}
+  annotations: {{ toYaml .Values.gpu.metadata.annotations | nindent 4 }}
 spec:
   image: {{ .Values.gpu.spec.image }}
   initImage: {{ .Values.gpu.spec.initImage }}

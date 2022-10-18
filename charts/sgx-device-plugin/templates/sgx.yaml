@@ -7,6 +7,7 @@ apiVersion: deviceplugin.intel.com/v1
 kind: SgxDevicePlugin
 metadata:
   name: {{ .Values.sgx.metadata.name }}
+  annotations: {{ toYaml .Values.sgx.metadata.annotations | nindent 4 }}
 spec:
   image: {{ .Values.sgx.spec.image }}
   initImage: {{ .Values.sgx.spec.initImage }}
