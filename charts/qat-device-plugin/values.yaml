@@ -13,4 +13,4 @@ qat:
     nodeSelector:
       intel.feature.node.kubernetes.io/qat: 'true'
 
-  nodeFeatureRule: true
+  nodeFeatureRule: false

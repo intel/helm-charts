@@ -10,4 +10,4 @@ sgx:
     nodeSelector:
       intel.feature.node.kubernetes.io/sgx: 'true'
 
-  nodeFeatureRule: true
+  nodeFeatureRule: false
