@@ -14,10 +14,10 @@ helm repo update
 You can execute `helm search repo intel` command to see pulled charts [optional].
 
 ## Install Helm Chart
-CRDs of the device plugin operator are installed as part of the chart. 
+CRDs of the device plugin operator are installed as part of the chart.
 
 ```
-helm install device-plugin-operator intel/device-plugin-operator [flags] 
+helm install device-plugin-operator intel/device-plugin-operator [flags]
 ```
 
 ## Upgrade Chart
@@ -43,5 +43,5 @@ You may also run `helm show values` on this chart's dependencies for additional 
 |parameter| value |
 |---------|-----------|
 | `hub` | `intel` |
-| `tag` | `0.24.0` |
+| `tag` | `0.24.1` |
 | `pullPolicy` | `IfNotPresent` |

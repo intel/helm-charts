@@ -34,8 +34,8 @@ You may also run `helm show values` on this chart's dependencies for additional 
 
 |parameter| value |
 |---------|-----------|
-| `image` | `intel/intel-qat-plugin:0.24.0` |
-| `initImage` | `intel/intel-qat-initcontainer:0.24.0` |
+| `image` | `intel/intel-qat-plugin:0.24.1` |
+| `initImage` | `intel/intel-qat-initcontainer:0.24.1` |
 | `dpdkDriver` | `vfio-pci` |
 | `kernelVfDrivers` | `c6xxvf`, `4xxxvf` |
 | `maxNumDevices` | `128` |
