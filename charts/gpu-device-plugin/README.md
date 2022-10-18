@@ -33,8 +33,8 @@ You may also run `helm show values` on this chart's dependencies for additional 
 
 |parameter| value |
 |---------|-----------|
-| `image` | `intel/intel-gpu-plugin:0.24.0` |
-| `initImage` | `intel/intel-gpu-initcontainer:0.24.0` |
+| `image` | `intel/intel-gpu-plugin:0.24.1` |
+| `initImage` | `intel/intel-gpu-initcontainer:0.24.1` |
 | `sharedDevNum` | `1` |
 | `resourceManager` | `false` |
 | `enableMonitoring` | `true` |
