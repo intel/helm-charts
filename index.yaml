@@ -163,6 +163,17 @@ entries:
     version: 3.0.0
   tcs-issuer:
   - apiVersion: v2
+    appVersion: 0.3.0
+    created: "2022-10-19T11:55:31.54007386Z"
+    description: A Helm chart for Trusted Certificate Issuer
+    digest: 8af8792afbcb5f427814b992b82db9746d7e6cdabfa8c88b991709b5a6c4b320
+    home: https://github.com/intel/trusted-certificate-issuer
+    name: tcs-issuer
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/tcs-issuer-0.3.0/tcs-issuer-0.3.0.tgz
+    version: 0.3.0
+  - apiVersion: v2
     appVersion: 0.2.0
     created: "2022-10-07T10:52:36.907840794Z"
     description: A Helm chart for Trusted Certificate Issuer
@@ -173,4 +184,4 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/tcs-issuer-0.2.0/tcs-issuer-0.2.0.tgz
     version: 0.2.0
-generated: "2022-10-19T11:17:13.050926559Z"
+generated: "2022-10-19T11:55:31.54020866Z"
