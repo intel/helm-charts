@@ -16,7 +16,7 @@ spec:
   logLevel:  {{ .Values.logLevel }}
   nodeSelector: {{- .Values.nodeSelector | toYaml | nindent 4 }}
 ---
-{{ if eq .Values.sgx.nodeFeatureRule true }}
+{{ if eq .Values.nodeFeatureRule true }}
 apiVersion: nfd.k8s-sigs.io/v1alpha1
 kind: NodeFeatureRule
 metadata:
