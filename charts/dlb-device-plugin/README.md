@@ -10,11 +10,11 @@ You can execute `helm search repo intel` command to see pulled charts [optional]
 
 ## Install Helm Chart
 ```
-helm install dlb-device-plugin intel/dlb-device-plugin [flags]
+helm install dlb-device-plugin intel/intel-device-plugins-dlb [flags]
 ```
 ## Upgrade Chart
 ```
-helm upgrade dlb-device-plugin intel/dlb-device-plugin [flags]
+helm upgrade dlb-device-plugin intel/intel-device-plugins-dlb [flags]
 ```
 
 ## Uninstall Chart
@@ -26,7 +26,7 @@ helm uninstall dlb-device-plugin
 See [Customizing the Chart Before Installing](https://helm.sh/docs/intro/using_helm/#customizing-the-chart-before-installing). To see all configurable options with detailed comments:
 
 ```console
-helm show values intel/dlb-device-plugin
+helm show values intel/intel-device-plugins-dlb
 ```
 
 You may also run `helm show values` on this chart's dependencies for additional options.
