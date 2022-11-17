@@ -16,7 +16,7 @@ spec:
   nodeSelector: {{- .Values.nodeSelector | toYaml | nindent 4 }}
 
 ---
-{{ if eq .Values.dlb.nodeFeatureRule true }}
+{{ if eq .Values.nodeFeatureRule true }}
 apiVersion: nfd.k8s-sigs.io/v1alpha1
 kind: NodeFeatureRule
 metadata:
