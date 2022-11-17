@@ -10,11 +10,11 @@ You can execute `helm search repo intel` command to see pulled charts [optional]
 
 ## Install Helm Chart
 ```
-helm install dsa-device-plugin intel/dsa-device-plugin [flags]
+helm install dsa-device-plugin intel/intel-device-plugins-dsa [flags]
 ```
 ## Upgrade Chart
 ```
-helm upgrade dsa-device-plugin intel/dsa-device-plugin [flags]
+helm upgrade dsa-device-plugin intel/intel-device-plugins-dsa [flags]
 ```
 
 ## Uninstall Chart
@@ -26,7 +26,7 @@ helm uninstall dsa-device-plugin
 See [Customizing the Chart Before Installing](https://helm.sh/docs/intro/using_helm/#customizing-the-chart-before-installing). To see all configurable options with detailed comments:
 
 ```console
-helm show values intel/dsa-device-plugin
+helm show values intel/intel-device-plugins-dsa
 ```
 
 You may also run `helm show values` on this chart's dependencies for additional options.
