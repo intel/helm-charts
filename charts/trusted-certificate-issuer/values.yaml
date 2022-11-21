@@ -13,7 +13,7 @@ image:
 controllerExtraArgs: {}
 #controllerExtraArgs: |-
 #  - --csr-full-cert-chain=false | true
-#  - --key-wrap-mechanism=aes_gcm | ads_key_pad_wrap
+#  - --key-wrap-mechanism=aes_gcm | aes_key_pad_wrap
 
 imagePullSecrets: []
 
