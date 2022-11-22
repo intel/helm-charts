@@ -1,9 +1,0 @@
-dependencies:
-- name: hadoop
-  repository: file://../hadoop
-  version: 1.2.1
-- name: zookeeper
-  repository: https://charts.bitnami.com/bitnami
-  version: 10.0.2
-digest: sha256:8ee52ade8aace778334f9f001ce15a1c788c13870b2b7a1b4f2d6aa8c6ef7c7c
-generated: "2022-07-22T13:14:07.577045+05:00"
