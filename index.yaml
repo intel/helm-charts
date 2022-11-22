@@ -561,6 +561,16 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/tcs-issuer-0.2.0/tcs-issuer-0.2.0.tgz
     version: 0.2.0
+  trusted-attestation-controller:
+  - apiVersion: v1
+    appVersion: 0.4.0
+    created: "2022-11-22T15:32:26.414265461Z"
+    description: Helm chart for Trusted Attestation Controller
+    digest: 80d7c939fd768c97a7da4d9dc7a8dd48112a2e107f720f6e31ee3e1a4285440a
+    name: trusted-attestation-controller
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/trusted-attestation-controller-0.4.0/trusted-attestation-controller-0.4.0.tgz
+    version: 0.4.0
   vault:
   - apiVersion: v2
     appVersion: 1.16.0
@@ -578,4 +588,4 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/vault-0.8.0/vault-0.8.0.tgz
     version: 0.8.0
-generated: "2022-11-22T15:03:24.325855345Z"
+generated: "2022-11-22T15:32:26.414367462Z"
