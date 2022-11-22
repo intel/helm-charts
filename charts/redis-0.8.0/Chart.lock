@@ -1,0 +1,6 @@
+dependencies:
+- name: redis
+  repository: https://charts.helm.sh/stable
+  version: 10.5.7
+digest: sha256:56ff520700f56dc4823891c8e9ffcb284dc50bcf660d5f8cfd94695b8917242a
+generated: "2022-11-01T07:48:44.284566333+08:00"
