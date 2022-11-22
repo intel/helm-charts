@@ -1,0 +1,59 @@
+# INTEL CONFIDENTIAL
+#
+# Copyright (C) 2022 Intel Corporation.
+#
+# This software and the related documents are Intel copyrighted materials, and your use of
+# them is governed by the express license under which they were provided to you (License).
+# Unless the License provides otherwise, you may not use, modify, copy, publish, distribute,
+# disclose or transmit this software or the related documents without Intel's prior written permission.
+#
+# This software and the related documents are provided as is, with no express or implied warranties,
+# other than those that are expressly stated in the License.
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "fm-master.fullname" . }}
+  namespace: {{ .Values.global.namespace.value }}
+spec:
+  selector:
+    matchLabels:
+      app: evi-fm-master-fs
+  replicas: {{ .Values.replicaCount }}
+  template:
+    metadata:
+      labels:
+        app: evi-fm-master-fs
+        version: v1
+    spec:
+      nodeSelector:
+        feature.node.kubernetes.io/cpu-cpuid.AVX512VNNI: 'true'
+        feature.node.kubernetes.io/cpu-cpuid.AVX2: 'true'
+      serviceAccountName: evi-fm-master-fs
+      containers:
+      - name: evi-fm-master-fs
+        image: {{ .Values.image.repository }}:{{ .Values.image.version}}
+        command: ["/bin/sh"]
+        args: ["-c", 'cp /opt/feature_matching_service_master/featurematchingservice/master/prod_fs_master.config /opt/featurematchingservice/prod_fs_master.config; sed -i "s/^minWorkerRequired=.*/minWorkerRequired=${FM_WORKER_COUNT}/g" /opt/featurematchingservice/prod_fs_master.config; sed -i "s/^timeBegin=.*/timeBegin=${FM_TIME_BEGIN}/g" /opt/featurematchingservice/prod_fs_master.config; sed -i "s/^timeEnd=.*/timeEnd=${FM_TIME_END}/g" /opt/featurematchingservice/prod_fs_master.config; sed -i "s/^allowedCaptureSourceIds=.*/allowedCaptureSourceIds=${FM_CAPTURE_IDS}/g" /opt/featurematchingservice/prod_fs_master.config; /opt/featurematchingservice/build/bin/fms_master -C /opt/featurematchingservice/prod_fs_master.config']
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        env:
+        - name: FM_WORKER_COUNT
+          value: "{{ .Values.env.workerCount }}"
+        - name: FM_TIME_BEGIN
+          value: "{{ .Values.env.timeBegin }}"
+        - name: FM_TIME_END
+          value: "{{ .Values.env.timeEnd }}"
+        - name: FM_CAPTURE_IDS
+          value: "{{ .Values.env.allowedCaptureSourceIds }}"
+        ports:
+        - containerPort: {{ .Values.image.containerPort }}
+        volumeMounts:
+        - mountPath: /opt/feature_matching_service_master/featurematchingservice/master/prod_fs_master.config
+          subPath: prod_fs_master.config
+          name: config-volume
+      volumes:
+      - name: config-volume
+        configMap:
+          name: evi-fm-master-fs
+
