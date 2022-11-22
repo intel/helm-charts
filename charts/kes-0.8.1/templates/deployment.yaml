@@ -1,0 +1,114 @@
+# INTEL CONFIDENTIAL
+#
+# Copyright (C) 2022 Intel Corporation.
+#
+# This software and the related documents are Intel copyrighted materials, and your use of
+# them is governed by the express license under which they were provided to you (License).
+# Unless the License provides otherwise, you may not use, modify, copy, publish, distribute,
+# disclose or transmit this software or the related documents without Intel's prior written permission.
+#
+# This software and the related documents are provided as is, with no express or implied warranties,
+# other than those that are expressly stated in the License.
+
+---
+{{- if .Values.global.namespace.create -}}
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.global.namespace.value }}
+{{- end }}
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: {{ .Values.global.namespace.value }}
+  name: {{ .Values.service.name }}
+  labels:
+    app: {{ .Values.service.name }}
+  annotations:
+    container.apparmor.security.beta.kubernetes.io/kes: runtime/default
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.service.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.service.name }}
+    spec:
+      nodeSelector:
+        feature.node.kubernetes.io/cpu-cpuid.AVX512VNNI: 'true'
+        feature.node.kubernetes.io/cpu-cpuid.AVX2: 'true'
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: {{ .Values.service.name }}
+          image: {{ .Values.image.repository }}:{{ .Values.image.Version }}
+          workingDir: /
+          command: ["/kes"]
+          args: ["server", "--config={{ .Values.config }}", "--root={{ .Values.root }}", "--auth={{ .Values.auth }}"]
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+          - name: {{ .Values.env.appIdentity.name }}
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Values.volumes.secret.vaultCrts.name }}
+                key: {{ .Values.env.appIdentity.name }}
+            value: {{ .Values.env.appIdentity.value }}
+          - name: {{ .Values.env.appRoleID.name }}
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Values.volumes.secret.vaultCrts.name }}
+                key: {{ .Values.env.appRoleID.name }}
+          - name: {{ .Values.env.appSecret.name }}
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Values.volumes.secret.vaultCrts.name }}
+                key: {{ .Values.env.appSecret.name }}
+          - name: {{ .Values.env.vaultSkipVerify.name }}
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Values.volumes.secret.kesEnvSecret.name }}
+                key: {{ .Values.env.vaultSkipVerify.name }}
+          - name: {{ .Values.env.kesClientCert.name }}
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Values.volumes.secret.kesEnvSecret.name }}
+                key: {{ .Values.env.kesClientCert.name }}
+          - name: {{ .Values.env.kesClientKey.name }}
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Values.volumes.secret.kesEnvSecret.name }}
+                key: {{ .Values.env.kesClientKey.name }}
+          - name: {{ .Values.env.vaultToken.name }}
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Values.volumes.secret.vaultKey.name }}
+                key: {{ .Values.env.vaultToken.name }}
+          ports:
+          - containerPort: {{ .Values.image.containerPort }}
+          volumeMounts:
+          - name: kes-crts
+            mountPath: "/pki"
+          - mountPath: /kes-config.yaml
+            subPath: kes-config.yaml
+            name: kes-config
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          resources:
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+            requests:
+              cpu: "250m"
+              memory: "128Mi"
+      volumes:
+      - name: kes-crts
+        secret:
+          secretName: {{ .Values.volumes.secret.kesCrts.name }}
+      - name: kes-config
+        configMap:
+          name: {{ .Values.volumes.configMap.kesConfig.name }}
