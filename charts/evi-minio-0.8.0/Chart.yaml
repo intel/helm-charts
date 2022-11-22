@@ -1,0 +1,11 @@
+apiVersion: v2
+appVersion: 1.16.0
+dependencies:
+- name: minio
+  repository: https://charts.min.io/
+  tags:
+  - minio
+  version: 4.0.2
+description: A Helm chart for Kubernetes
+name: evi-minio
+version: 0.8.0
