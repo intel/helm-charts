@@ -1,0 +1,81 @@
+# INTEL CONFIDENTIAL
+#
+# Copyright (C) 2022 Intel Corporation.
+#
+# This software and the related documents are Intel copyrighted materials, and your use of
+# them is governed by the express license under which they were provided to you (License).
+# Unless the License provides otherwise, you may not use, modify, copy, publish, distribute,
+# disclose or transmit this software or the related documents without Intel's prior written permission.
+#
+# This software and the related documents are provided as is, with no express or implied warranties,
+# other than those that are expressly stated in the License.
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: {{ .Values.namespace.value }}
+  name: evi-storage-rest
+  labels:
+    version: v1
+  annotations:
+    container.apparmor.security.beta.kubernetes.io/storage-rest: runtime/default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: storage-rest
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: storage-rest
+        version: v1
+    spec:
+      nodeSelector:
+        feature.node.kubernetes.io/cpu-cpuid.AVX512VNNI: 'true'
+        feature.node.kubernetes.io/cpu-cpuid.AVX2: 'true'
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: {{ .Chart.Name }}
+        image: "{{ .Values.image.repository }}:{{ .Values.image.Version }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        #command: ["/bin/sh"]
+        args: ["-s", "{{ .Values.entrypoint.sleep }}", "-c", "{{ .Values.entrypoint.csvCounts }}"]
+        livenessProbe:
+          httpGet:
+            path: {{ .Values.liveness.path }}
+            port: {{ .Values.service.port }}
+            httpHeaders:
+            - name: {{ .Values.liveness.httpHeaders.name }}
+              value: {{ .Values.liveness.httpHeaders.value }}
+          initialDelaySeconds: {{ .Values.liveness.initialDelaySeconds }}
+          periodSeconds: {{ .Values.liveness.periodSeconds }}
+          timeoutSeconds: {{ .Values.liveness.timeoutSeconds }}
+        resources:
+          requests:
+            cpu: "100m"
+            memory: 1024Mi
+          limits:
+            cpu: "1"
+            memory: 2040Mi
+        ports:
+        - containerPort: {{ .Values.service.port }}
+        volumeMounts:
+        - name: storage-rest-secret-volume
+          readOnly: true
+          mountPath: "/home/rest_api/configure/auth"
+        - name: storage-rest-cm-volume
+          mountPath: "/home/rest_api/configure"
+        securityContext:
+          {{- toYaml .Values.securityContext | nindent 10 }}
+      serviceAccountName: {{ .Values.serviceAccount.name }}
+      volumes:
+      - name: storage-rest-secret-volume
+        secret:
+          secretName: {{ .Values.secret.secretName }}
+      - name: storage-rest-cm-volume
+        configMap:
+          name: {{ .Values.configMap.name }}
