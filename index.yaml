@@ -45,6 +45,55 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/evam-dek-1.0.0/evam-dek-1.0.0.tgz
     version: 1.0.0
+  evi-minio:
+  - apiVersion: v2
+    appVersion: 1.16.0
+    created: "2022-11-22T14:56:52.240637972Z"
+    dependencies:
+    - name: minio
+      repository: https://charts.min.io/
+      tags:
+      - minio
+      version: 4.0.2
+    description: A Helm chart for Kubernetes
+    digest: 3872a6982c5ff803d9bbe1573bb889b5d19f0c19c9cf6cb63f6d0c7f39b307d1
+    name: evi-minio
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/evi-minio-0.8.0/evi-minio-0.8.0.tgz
+    version: 0.8.0
+  evi-test-tool:
+  - apiVersion: v2
+    appVersion: 1.16.0
+    created: "2022-11-22T14:56:52.409871806Z"
+    description: A Helm chart for Kubernetes
+    digest: 04fba273472427c59b393fc75e59514cf42289bd612cfc510ba22a180e7d3bcf
+    name: evi-test-tool
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/evi-test-tool-0.8.0/evi-test-tool-0.8.0.tgz
+    version: 0.8.0
+  fm-master:
+  - apiVersion: v2
+    appVersion: 1.16.0
+    created: "2022-11-22T14:56:52.59961805Z"
+    description: A Helm chart for Kubernetes
+    digest: 56bccae070448792b6b08956c7d9e302fb9ccbc0508af4f6a50622682caec1d1
+    name: fm-master
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/fm-master-0.8.0/fm-master-0.8.0.tgz
+    version: 0.8.0
+  fm-worker:
+  - apiVersion: v2
+    appVersion: 1.16.0
+    created: "2022-11-22T14:56:52.801417983Z"
+    description: A Helm chart for Kubernetes
+    digest: 84a3e8c9592661cd9a686ba055f2269fba4f6530641180353073788d123b05f2
+    name: fm-worker
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/fm-worker-0.8.0/fm-worker-0.8.0.tgz
+    version: 0.8.0
   intel-device-plugins-dlb:
   - apiVersion: v2
     appVersion: 0.25.0
@@ -302,6 +351,17 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/intel-device-plugins-sgx-0.24.0/intel-device-plugins-sgx-0.24.0.tgz
     version: 0.24.0
+  kes:
+  - apiVersion: v2
+    appVersion: 1.16.0
+    created: "2022-11-22T14:56:52.981597515Z"
+    description: A Helm chart for Kubernetes
+    digest: 076d401132c08fd48d29af5938318d2ab97e0b900cd25a1d10e1d0d68bbe20f3
+    name: kes
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/kes-0.8.1/kes-0.8.1.tgz
+    version: 0.8.1
   load-generator:
   - apiVersion: v1
     appVersion: "1.0"
@@ -326,7 +386,142 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/multimodal-data-visualization-3.0.0/multimodal-data-visualization-3.0.0.tgz
     version: 3.0.0
+  my-keycloak:
+  - apiVersion: v2
+    appVersion: 1.16.0
+    created: "2022-11-22T14:56:53.214512759Z"
+    dependencies:
+    - condition: keycloak.enabled
+      name: keycloak
+      repository: https://charts.bitnami.com/bitnami
+      tags:
+      - keycloak
+      version: 9.7.1
+    description: A Helm chart for Kubernetes
+    digest: 98ab7fdec667bda309e89e1f1ed715a41fae9b62e738105fc6081d4ad0ba9c93
+    name: my-keycloak
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/my-keycloak-0.8.0/my-keycloak-0.8.0.tgz
+    version: 0.8.0
+  new-hbase:
+  - apiVersion: v2
+    appVersion: 1.16.0
+    created: "2022-11-22T14:56:53.406022887Z"
+    dependencies:
+    - condition: hbase.enabled
+      name: hbase
+      repository: https://itboy87.github.io/bigdata-charts/
+      tags:
+      - hbase
+      version: 0.1.7
+    description: A Helm chart for Kubernetes
+    digest: b24a7167508bdbf2a1008afbab1e7d6428ead0a9d4d50a9613e17efe0ee7f3ca
+    name: new-hbase
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/new-hbase-0.8.0/new-hbase-0.8.0.tgz
+    version: 0.8.0
+  postgresql-ri:
+  - apiVersion: v2
+    appVersion: 14.4.0
+    created: "2022-11-22T14:56:53.645167174Z"
+    dependencies:
+    - name: postgresql
+      repository: https://charts.bitnami.com/bitnami
+      tags:
+      - postgresql
+      version: 11.6.23
+    description: A Helm chart for Kubernetes
+    digest: f3efbb3fce5970f7e6af19a92f8d5c113e60b31c72d5e84563e26100ab8f5cbc
+    name: postgresql-ri
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/postgresql-ri-0.8.0/postgresql-ri-0.8.0.tgz
+    version: 0.8.0
+  query-rest:
+  - apiVersion: v2
+    appVersion: 1.16.0
+    created: "2022-11-22T14:56:53.831258452Z"
+    description: A Helm chart for Kubernetes
+    digest: 88d99e2c9232229a8f66608321ba9ba4444d09ebb37c3290fa8173520607ce6b
+    name: query-rest
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/query-rest-0.8.0/query-rest-0.8.0.tgz
+    version: 0.8.0
+  query-web:
+  - apiVersion: v2
+    appVersion: 1.16.0
+    created: "2022-11-22T14:56:53.998777201Z"
+    description: A Helm chart for Kubernetes
+    digest: f7c1de24eeff02f91edfc6097635a31b530ffb7c4c49ffae7626d2d5808337b1
+    name: query-web
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/query-web-0.8.0/query-web-0.8.0.tgz
+    version: 0.8.0
+  redis:
+  - apiVersion: v2
+    appVersion: 1.16.0
+    created: "2022-11-22T14:56:54.190594474Z"
+    dependencies:
+    - name: redis
+      repository: https://charts.helm.sh/stable
+      tags:
+      - redis
+      version: 10.5.7
+    description: A Helm chart for Kubernetes
+    digest: 600ab7a589c3b438f18b02e6a73366346acedb76097b3123943053cea4d2850d
+    name: redis
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/redis-0.8.0/redis-0.8.0.tgz
+    version: 0.8.0
+  search-image-by-image:
+  - apiVersion: v2
+    appVersion: 1.16.0
+    created: "2022-11-22T14:56:54.363166319Z"
+    description: A Helm chart for Kubernetes
+    digest: 003961f586df1a3fe3385b69c6d81def469d596dfffb21eae42366fca9aa6c1e
+    name: search-image-by-image
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/search-image-by-image-0.8.0/search-image-by-image-0.8.0.tgz
+    version: 0.8.0
+  spark-cluster:
+  - apiVersion: v2
+    appVersion: 1.16.0
+    created: "2022-11-22T14:56:54.54992092Z"
+    description: A Helm chart for Kubernetes
+    digest: 28520e6950f4ca8a159b8d0c6073984f31b90dd6200cd90b6c5843a95a1c5ae9
+    name: spark-cluster
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/spark-cluster-0.8.0/spark-cluster-0.8.0.tgz
+    version: 0.8.0
+  storage-rest:
+  - apiVersion: v2
+    appVersion: 1.16.0
+    created: "2022-11-22T14:56:54.733901049Z"
+    description: A Helm chart for Kubernetes
+    digest: 1115d8ada5ec60b2a3d3cf9a7c69d8c7e54a8ad237af86022e4f64ced7af144f
+    name: storage-rest
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/storage-rest-0.8.0/storage-rest-0.8.0.tgz
+    version: 0.8.0
   tcs-issuer:
+  - apiVersion: v2
+    appVersion: 0.4.0
+    created: "2022-11-22T14:56:54.951280038Z"
+    description: A Helm chart for Trusted Certificate Issuer
+    digest: 51d5ce84f61fa327989888759588fb1935e89493a26eb0eb044cb5997ef214f7
+    home: https://github.com/intel/trusted-certificate-issuer
+    name: tcs-issuer
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/tcs-issuer-0.4.0/tcs-issuer-0.4.0.tgz
+    version: 0.4.0
   - apiVersion: v2
     appVersion: 0.3.0
     created: "2022-10-19T11:55:31.54007386Z"
@@ -349,4 +544,21 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/tcs-issuer-0.2.0/tcs-issuer-0.2.0.tgz
     version: 0.2.0
-generated: "2022-11-22T03:53:09.944503456Z"
+  vault:
+  - apiVersion: v2
+    appVersion: 1.16.0
+    created: "2022-11-22T14:56:55.195123059Z"
+    dependencies:
+    - name: vault
+      repository: https://helm.releases.hashicorp.com
+      tags:
+      - vault
+      version: 0.21.0
+    description: A Helm chart for Kubernetes
+    digest: 862cb399bb4160ac635c07a371415bec8d66d7455e6cb032f982ab5ec704c777
+    name: vault
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/vault-0.8.0/vault-0.8.0.tgz
+    version: 0.8.0
+generated: "2022-11-22T14:56:55.195180058Z"
