@@ -1,0 +1,81 @@
+# INTEL CONFIDENTIAL
+#
+# Copyright (C) 2022 Intel Corporation.
+#
+# This software and the related documents are Intel copyrighted materials, and your use of
+# them is governed by the express license under which they were provided to you (License).
+# Unless the License provides otherwise, you may not use, modify, copy, publish, distribute,
+# disclose or transmit this software or the related documents without Intel's prior written permission.
+#
+# This software and the related documents are provided as is, with no express or implied warranties,
+# other than those that are expressly stated in the License.
+
+---
+# Default values for kes.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+global:
+  namespace:
+    create: false
+    value: minio
+
+image:
+  repository: minio/kes
+  Version: v0.13.4
+  pullPolicy: IfNotPresent
+  containerPort: 7373
+
+service:
+  name: evi-kes
+
+kesAddress: 0.0.0.0
+nodePort: 30737
+
+vaultService:
+  address: vault.dev
+  port: 8200
+
+env:
+  appIdentity: 
+    name: APP_IDENTITY
+  appRoleID:
+    name: APP_ROLE_ID
+  appSecret:
+    name: APP_SECRET_ID
+  vaultSkipVerify:
+    name: VAULT_SKIP_VERIFY
+  kesClientCert:
+    name: KES_CLIENT_CERT
+  kesClientKey:
+    name: KES_CLIENT_KEY
+  vaultToken:
+    name: VAULT_TOKEN
+
+# all sudo as root to enable modification
+securityContext:
+  readOnlyRootFilesystem: false
+  allowPrivilegeEscalation: true
+
+volumes:
+  configMap:
+    kesConfig:
+      name: kes-config
+      value: config/kes-config.yaml
+  secret:
+    kesCrts:
+      name: kes-crts
+      value: "/pki"
+    vaultCrts:
+      name: vault-tls
+    vaultKey:
+      name: vault-key
+    kesEnvSecret:
+      name: vault-env-crts
+
+# settings of entrypoint args
+config: kes-config.yaml
+root: disabled
+auth: "off"
