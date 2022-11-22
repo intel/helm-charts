@@ -1,0 +1,6 @@
+dependencies:
+- name: hbase
+  repository: https://itboy87.github.io/bigdata-charts/
+  version: 0.1.7
+digest: sha256:7c675757df8730daee79d30a0c80761da9cc257e150636d7efdd739fa9b127a3
+generated: "2022-11-01T07:48:30.758914653+08:00"
