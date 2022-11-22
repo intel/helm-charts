@@ -1,0 +1,11 @@
+apiVersion: v2
+appVersion: 14.4.0
+dependencies:
+- name: postgresql
+  repository: https://charts.bitnami.com/bitnami
+  tags:
+  - postgresql
+  version: 11.6.23
+description: A Helm chart for Kubernetes
+name: postgresql-ri
+version: 0.8.0

@@ -1,0 +1,72 @@
+# INTEL CONFIDENTIAL
+#
+# Copyright (C) 2022 Intel Corporation.
+#
+# This software and the related documents are Intel copyrighted materials, and your use of
+# them is governed by the express license under which they were provided to you (License).
+# Unless the License provides otherwise, you may not use, modify, copy, publish, distribute,
+# disclose or transmit this software or the related documents without Intel's prior written permission.
+#
+# This software and the related documents are provided as is, with no express or implied warranties,
+# other than those that are expressly stated in the License.
+
+---
+
+tags:
+  postgresql: true
+
+## @param global.storageClass Global StorageClass for Persistent Volume(s)
+global:
+  storageClass: evi-local-storage-psql
+
+  postgresql:
+    ## @param global.postgresql.service.ports.postgresql PostgreSQL service port (overrides `service.ports.postgresql`)
+    ##
+    service:
+      ports:
+        postgresql: "5432"
+
+postgresql:
+  auth:
+    ## @param auth.enablePostgresUser Assign a password to the "postgres" admin user. Otherwise, remote access will be blocked for this user
+    ##
+    enablePostgresUser: true
+    ## @param auth.username (Required) Name for a custom user to create
+    ##
+    username: "hce"
+    ## @param auth.database (Required) Name for a custom database to create
+    ##
+    database: "hce"
+    ## @param auth.existingSecret Name of existing secret to use for PostgreSQL credentials. `auth.postgresPassword`, `auth.password`, and `auth.replicationPassword` will be ignored and picked up from this secret. The secret might also contains the key `ldap-password` if LDAP is enabled. `ldap.bind_password` will be ignored and picked from this secret in this case.
+    ##
+    existingSecret: "sqldbsecret"
+    ## @param auth.secretKeys.adminPasswordKey Name of key in existing secret to use for PostgreSQL credentials. Only used when `auth.existingSecret` is set.
+    ## @param auth.secretKeys.userPasswordKey Name of key in existing secret to use for PostgreSQL credentials. Only used when `auth.existingSecret` is set.
+    ##
+    secretKeys:
+      adminPasswordKey: postgres-password
+      userPasswordKey: password
+    ## @param auth.usePasswordFiles Mount credentials as a files instead of using an environment variable
+    ##
+    usePasswordFiles: false
+
+secret:
+  # secret.adminPassword (Required) Password for the "postgres" admin user (base64 encoded)
+  adminPassword: ""
+  # secret.username (Required) Name for a custom user to create (base64 encoded)
+  username: ""
+  # secret.userPassword (Required) Password for the custom user to create (base64 encoded)
+  userPassword: ""
+  # secret.database (Required) Name for a custom database to create
+  database: ""
+
+# scCreate Whether to create storage class
+scCreate: true
+
+persistance:
+  # persistance.basePath (Required) Parent directory for postgresql pv to use 
+  basePath: ""
+  # persistance.hostname (Required) Node hostname for pv affinity
+  hostname: ""
+  # persistance.size (Required) Capacity size of pv
+  size: ""
