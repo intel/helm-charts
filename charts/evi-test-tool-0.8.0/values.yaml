@@ -1,0 +1,51 @@
+# INTEL CONFIDENTIAL
+#
+# Copyright (C) 2022 Intel Corporation.
+#
+# This software and the related documents are Intel copyrighted materials, and your use of
+# them is governed by the express license under which they were provided to you (License).
+# Unless the License provides otherwise, you may not use, modify, copy, publish, distribute,
+# disclose or transmit this software or the related documents without Intel's prior written permission.
+#
+# This software and the related documents are provided as is, with no express or implied warranties,
+# other than those that are expressly stated in the License.
+
+---
+# Default values for tools.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+image:
+  repository: evi-test-tool
+  Version: 1.1
+  port: 80
+  pullPolicy: IfNotPresent
+
+global:
+  namespace:
+    create: true
+    value: evi-test-tool
+    istioInjection:
+      create: true
+
+persistent:
+  pvCapacity: 20Gi
+  podMountPath: /opt/data
+
+configMap:
+  configTools:
+    value: evi-test-tool-cfg
+    podMountPath: /opt/evi_test_tool/configuration
+  configAI: 
+    create: true
+    value: ai-structuring-cfg
+    podMountPath: /opt/evi_test_tool/config-cpu-pipe
+
+local:
+  dataPath: /home/data
+  hostName: nodea
+
+storage:
+  minio:
+    rootUser: ""
+    rootPassword: ""
