@@ -1,0 +1,49 @@
+# INTEL CONFIDENTIAL
+#
+# Copyright (C) 2022 Intel Corporation.
+#
+# This software and the related documents are Intel copyrighted materials, and your use of
+# them is governed by the express license under which they were provided to you (License).
+# Unless the License provides otherwise, you may not use, modify, copy, publish, distribute,
+# disclose or transmit this software or the related documents without Intel's prior written permission.
+#
+# This software and the related documents are provided as is, with no express or implied warranties,
+# other than those that are expressly stated in the License.
+
+---
+# Default values for fm-worker.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+global:
+  namespace:
+    create: false
+    value: fm
+    istioInjection:
+      create: false
+
+configMap:
+  name: evi-fm-worker-fs
+  hbaseStorage:
+    hbaseAddr: evi-hbase-hbase-master.smartedge-apps
+    hbasePort: 9090
+  redis:
+    redisAddr: tcp://evi-redis-standalone-master.smartedge-apps
+    redisPort: 6379
+
+service:
+  name: evi-fm-worker-fs
+  labels:
+    value: evi-fm-worker-fs
+
+image:
+  repository: 10.67.108.226/hce/fm-worker
+  version: master-c8d66502f0864e634a642d1062836050248fd81f
+  pullPolicy: IfNotPresent
+  containerPort: 8080
+
+env:
+  workerCount: 1
+  coreCount: 1
+  cpuSetting: "1:0|1:1"
+  loadFrom: local

@@ -1,0 +1,70 @@
+# INTEL CONFIDENTIAL
+#
+# Copyright (C) 2022 Intel Corporation.
+#
+# This software and the related documents are Intel copyrighted materials, and your use of
+# them is governed by the express license under which they were provided to you (License).
+# Unless the License provides otherwise, you may not use, modify, copy, publish, distribute,
+# disclose or transmit this software or the related documents without Intel's prior written permission.
+#
+# This software and the related documents are provided as is, with no express or implied warranties,
+# other than those that are expressly stated in the License.
+
+---
+apiVersion: apps/v1
+#kind: Deployment
+kind: StatefulSet
+metadata:
+  name: {{ include "fm-worker.fullname" . }}
+  namespace: {{ .Values.global.namespace.value }}
+spec:
+  selector:
+    matchLabels:
+      app: evi-fm-worker-fs
+  serviceName: "evi-fm-worker-fs"
+  replicas: {{ .Values.env.workerCount }}
+  minReadySeconds: 10 # by default is 0
+  podManagementPolicy: "OrderedReady"
+  template:
+    metadata:
+      labels:
+        app: evi-fm-worker-fs
+        version: v1
+    spec:
+      serviceAccountName: evi-fm-worker-fs
+      containers:
+      - name: evi-fm-worker-fs
+        image: {{ .Values.image.repository }}:{{ .Values.image.version}}
+        command: ["/bin/sh"]
+        args: ["-c", 'cp /opt/feature_matching_service/featurematchingservice/worker/worker.conf /opt/featurematchingservice/worker/worker-${HOSTNAME}.conf; sed -i "s/^cpuSetting=.*/cpuSetting=${FM_CPU_SETTING}/g" /opt/featurematchingservice/worker/worker-${HOSTNAME}.conf; sed -i "s/^name=WorkerName.*/name=${HOSTNAME}/g" /opt/featurematchingservice/worker/worker-${HOSTNAME}.conf; sed -i "s/^cpu=.*/cpu=${FM_CORE_COUNT}/g" /opt/featurematchingservice/worker/worker-${HOSTNAME}.conf; sed -i "s/^loadFrom=.*/loadFrom=${FM_LOAD_FROM}/g" /opt/featurematchingservice/worker/worker-${HOSTNAME}.conf; sleep 3; /opt/featurematchingservice/worker/bin/fmsWorker -C /opt/featurematchingservice/worker/worker-${HOSTNAME}.conf']
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        env:
+        - name: NODE_NAME
+          value: {{ include "fm-worker.fullname" . }}
+          #valueFrom:
+          #  fieldRef:
+          #    fieldPath: metadata.name
+        - name: FM_WORKER_COUNT
+          value: "{{ .Values.env.workerCount }}"
+        - name: FM_CORE_COUNT
+          value: "{{ .Values.env.coreCount }}"
+        - name: FM_CPU_SETTING
+          value: "{{ .Values.env.cpuSetting }}"
+        - name: FM_LOAD_FROM
+          value: "{{ .Values.env.loadFrom }}"
+        ports:
+        - containerPort: {{ .Values.image.containerPort }}
+        volumeMounts:
+        - mountPath: /opt/feature_matching_service/featurematchingservice/worker/worker.conf
+          subPath: worker.conf
+          name: config-volume
+        - mountPath: /opt/data/
+          name: fmlocal
+      volumes:
+      - name: config-volume
+        configMap:
+          name: evi-fm-worker-fs
+      - name: fmlocal
+        hostPath:
+          path: /home/fmlocal/
+
