@@ -368,6 +368,21 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/intel-device-plugins-sgx-0.24.0/intel-device-plugins-sgx-0.24.0.tgz
     version: 0.24.0
+  itm-services:
+  - apiVersion: v2
+    appVersion: 7.0.0
+    created: "2022-12-07T09:54:53.029185445Z"
+    dependencies:
+    - name: postgresql
+      repository: https://charts.bitnami.com/bitnami
+      version: 10.16.2
+    description: A Helm chart for ITM Microservices
+    digest: 4b6f77b758c43b236228517d38e339bb9c3bddf3ae5489a262e556ee32f690b9
+    name: itm-services
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/itm-services-2.0.0/itm-services-2.0.0.tgz
+    version: 2.0.0
   kes:
   - apiVersion: v2
     appVersion: 1.16.0
@@ -588,4 +603,4 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/vault-0.8.0/vault-0.8.0.tgz
     version: 0.8.0
-generated: "2022-11-22T15:32:26.414367462Z"
+generated: "2022-12-07T09:54:53.029239944Z"
