@@ -1,0 +1,72 @@
+# Copyright 2022 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rule-engine-config
+  namespace: {{ .Values.namespace }}
+data:
+  config.json: |
+    {
+        "event_frequency_alert": 10,
+        "rules": {
+            "collision_event": "event_type == 'collision'",
+            "near_miss_event": "event_type == 'near_miss'",
+            "overcrowd_cars": "num_cars >= 6",
+            "overcrowd_peds": "num_pedestrians >= 7",
+            "overcrowd_bikes": "num_bikes >= 5"
+        }
+    }
+  schema.json: |
+    {
+      "$schema": "http://json-schema.org/draft-04/schema#",
+      "type": "object",
+      "properties": {
+        "event_frequency_alert": {
+          "type": "integer"
+        },
+        "rules": {
+          "type": "object",
+          "properties": {
+            "collision_event": {
+              "type": "string"
+            },
+            "near_miss_event": {
+              "type": "string"
+            },
+            "overcrowd_cars": {
+              "type": "string"
+            },
+            "overcrowd_peds": {
+              "type": "string"
+            },
+            "overcrowd_bikes": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "collision_event",
+            "near_miss_event",
+            "overcrowd_cars",
+            "overcrowd_peds",
+            "overcrowd_bikes"
+          ]
+        }
+      },
+      "required": [
+        "event_frequency_alert",
+        "rules"
+      ]
+    }
