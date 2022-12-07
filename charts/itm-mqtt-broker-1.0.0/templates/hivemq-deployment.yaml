@@ -1,0 +1,67 @@
+# Copyright 2022 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+apiVersion: v1
+kind: ReplicationController
+metadata:
+  name: hivemq-replica
+  namespace: {{ .Values.namespace }}
+spec:
+  replicas: 3
+  selector:
+    app: hivemq-cluster1
+  template:
+    metadata:
+      name: hivemq-cluster1
+      labels:
+        app: hivemq-cluster1
+        role: itm
+    spec:
+      containers:
+      - name: hivemq-pods
+        image: hivemq/hivemq4:dns-4.5.14
+        ports:
+        - containerPort: 8080
+          protocol: TCP
+          name: hivemq-cc
+        - containerPort: 1883
+          protocol: TCP
+          name: mqtt
+        env:
+        - name: HIVEMQ_DNS_DISCOVERY_ADDRESS
+          value: "hivemq-discovery.{{ .Values.namespace }}.svc.cluster.local."
+        - name: HIVEMQ_DNS_DISCOVERY_TIMEOUT
+          value: "20"
+        - name: HIVEMQ_DNS_DISCOVERY_INTERVAL
+          value: "21"
+        - name: HIVEMQ_CLUSTER_TRANSPORT_TYPE
+          value: "TCP"
+        readinessProbe:
+          tcpSocket:
+            port: 1883
+          initialDelaySeconds: 30
+          periodSeconds: 60
+          failureThreshold: 60
+        livenessProbe:
+          tcpSocket:
+            port: 1883
+          initialDelaySeconds: 30
+          periodSeconds: 60
+          failureThreshold: 60
+      nodeSelector:
+        node-role.kubernetes.io/master: ""
+      tolerations:
+        - key: "node-role.kubernetes.io/master"
+          operator: "Exists"
+          effect: "NoSchedule"
