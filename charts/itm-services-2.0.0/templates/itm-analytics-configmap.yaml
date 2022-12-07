@@ -1,0 +1,168 @@
+# Copyright 2022 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: itm-analytics-cm
+  namespace: {{ .Values.namespace }}
+data:
+  config.json: |
+    {
+      "frames_queue_size": 30,
+      "tracking": true,
+      "detect_collision": true,
+      "cameras":[
+        {
+            "address": "Office Apartments 1",
+            "latitude": 12.840609,
+            "longitude": 77.651993,
+            "analytics": "pedestrian vehicle detection"
+        },
+        {
+            "address": "Office Apartments 2",
+            "latitude": 12.840609,
+            "longitude": 77.651993,
+            "analytics": "pedestrian vehicle detection"
+        },
+        {
+            "address": "Tech Avenue",
+            "latitude": 12.845484,
+            "longitude": 77.665585,
+            "analytics": "pedestrian vehicle bike detection"
+        },
+        {
+            "address": "EC Phase 1",
+            "latitude": 12.845017,
+            "longitude": 77.659988,
+            "analytics": "pedestrian vehicle detection"
+        },
+        {
+            "address": "Company car parking",
+            "latitude": 12.839368,
+            "longitude": 77.654709,
+            "analytics": "pedestrian vehicle bike detection"
+        },
+        {
+            "address": "2nd Cross Road",
+            "latitude": 12.840035,
+            "longitude": 77.659861,
+            "analytics": "pedestrian vehicle bike detection"
+        },
+        {
+            "address": "Bank Circle",
+            "latitude": 12.840747,
+            "longitude": 77.663845,
+            "analytics": "pedestrian vehicle bike detection"
+        },
+        {
+            "address": "Road Intersection",
+            "latitude":  12.839091,
+            "longitude": 77.659209,
+            "analytics": "pedestrian vehicle detection"
+        }
+      ]
+    }
+  schema.json: |
+    {
+    	"definitions": {},
+    	"$schema": "http://json-schema.org/draft-07/schema#",
+    	"$id": "https://example.com/object1652258901.json",
+    	"title": "Root",
+    	"type": "object",
+    	"required": [
+    		"frames_queue_size",
+    		"tracking",
+    		"detect_collision",
+    		"cameras"
+    	],
+    	"properties": {
+    		"frames_queue_size": {
+    			"$id": "#root/frames_queue_size",
+    			"title": "Frames_queue_size",
+    			"type": "integer",
+    			"default": 30
+    		},
+    		"tracking": {
+    			"$id": "#root/tracking",
+    			"title": "Tracking",
+    			"type": "boolean",
+    			"default": true
+    		},
+    		"detect_collision": {
+    			"$id": "#root/detect_collision",
+    			"title": "Detect_collision",
+    			"type": "boolean",
+    			"default": true
+    		},
+    		"cameras": {
+    			"$id": "#root/cameras",
+    			"title": "Cameras",
+    			"type": "array",
+    			"default": [],
+    			"items":{
+    				"$id": "#root/cameras/items",
+    				"title": "Items",
+    				"type": "object",
+    				"required": [
+    					"address",
+    					"latitude",
+    					"longitude",
+    					"analytics"
+    				],
+    				"properties": {
+    					"address": {
+    						"$id": "#root/cameras/items/address",
+    						"title": "Address",
+    						"type": "string",
+    						"default": "",
+    						"examples": [
+    							"Office Apartments 1"
+    						],
+    						"pattern": "^.*$"
+    					},
+    					"latitude": {
+    						"$id": "#root/cameras/items/latitude",
+    						"title": "Latitude",
+    						"type": "number",
+    						"examples": [
+    							12.840609
+    						],
+    						"default": 0.0
+    					},
+    					"longitude": {
+    						"$id": "#root/cameras/items/longitude",
+    						"title": "Longitude",
+    						"type": "number",
+    						"examples": [
+    							77.651993
+    						],
+    						"default": 0.0
+    					},
+    					"analytics": {
+    						"$id": "#root/cameras/items/analytics",
+    						"title": "Analytics",
+    						"type": "string",
+    						"default": "",
+    						"examples": [
+    							"pedestrian vehicle detection"
+    						],
+    						"pattern": "^.*$"
+    					}
+    				}
+    			}
+
+    		}
+    	}
+    }

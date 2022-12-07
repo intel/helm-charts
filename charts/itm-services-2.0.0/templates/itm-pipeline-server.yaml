@@ -1,0 +1,124 @@
+# Copyright 2022 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: {{ .Values.pipeline_server.name }}
+  name: {{ .Values.pipeline_server.name }}
+  namespace: {{ .Values.namespace }}
+
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Values.pipeline_server.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.pipeline_server.name }}
+        role: itm
+    spec:
+      initContainers:
+        - name: {{ .Values.itm_pipeline_server_init.name }}
+          image: {{ .Values.images.registry }}{{ .Values.images.itm_pipeline_server_init }}:{{ .Values.images.tag }}
+          imagePullPolicy: {{ .Values.imagePullPolicy }}
+          volumeMounts:
+            - mountPath: {{ .Values.pipeline_server.volumes.res.location }}
+              name: ps-res
+            - mountPath: {{ .Values.pipeline_server.volumes.models.location }}
+              name: ps-models
+          securityContext:
+            runAsUser: 0
+      containers:
+{{- $global := . -}}
+{{- range $instance_idx := until (int .Values.num_video_instances) -}}
+{{- $instance := "1" }}
+{{- if eq (int $global.Values.num_video_instances) 1 }}
+{{- $instance = "1" }}
+{{- end }}
+{{- if gt (int $global.Values.num_video_instances) 1 }}
+{{- $instance = add 1 $instance_idx }}
+{{- end }}
+      - name: {{ $global.Values.pipeline_server.name }}{{ $instance }}
+        image: {{ $global.Values.pipeline_server.image.repository }}:{{ $global.Values.pipeline_server.image.tag }}
+        imagePullPolicy: {{ $global.Values.pipeline_server.image.imagePullPolicy }}
+        command:
+          - ./resources/itm.sh
+        securityContext:
+          privileged: true
+          readOnlyRootFilesystem: true
+        volumeMounts:
+        - name: dev
+          mountPath: /dev
+        - name: tmp
+          mountPath: /tmp
+        - name: cm-cfg
+          mountPath: /home/pipeline-server/models/object_detection/person-vehicle-bike-detection-2000/person-vehicle-bike-detection-2000.json
+          subPath: person-vehicle-bike-detection-2000.json
+          readOnly: true
+        - name: cm-cfg
+          mountPath: /home/pipeline-server/pipelines/object_detection/person-vehicle-bike-detection-2000/pipeline.json
+          subPath: pipeline.json
+          readOnly: true
+        - name: cm-cfg
+          mountPath: /app/config.json
+          subPath: config.json
+          readOnly: true
+        - mountPath: {{ $global.Values.pipeline_server.volumes.models.location }}
+          name: ps-models
+        - mountPath: {{ $global.Values.pipeline_server.volumes.res.location }}
+          name: ps-res
+
+        env:
+        - name: PUBLISHER_TOPIC
+          value: {{ $global.Values.pipeline_server.topic.publisher }}{{ $instance }}
+        - name: MQTT_PORT
+          value: "{{ $global.Values.mqtt.port }}"
+        - name: MQTT_BROKER
+          value: {{ $global.Values.mqtt.broker }}
+        - name: XDG_RUNTIME_DIR
+          value: "/tmp"
+        - name: PY_LOG_LEVEL
+          value: "{{ $global.Values.py_log_level }}"
+        - name: SOURCE_TYPE
+          value: uri
+        {{- with (index $global.Values.pipeline_server.test_videos (mod $instance 2)) }}
+        - name: SOURCE_URI
+          value: {{ .uri }}
+        {{- end }}
+{{- end }}
+
+      volumes:
+      - name: dev
+        hostPath:
+          path: /dev
+      - name: tmp
+        hostPath:
+          path: /tmp
+      - name: cm-cfg
+        configMap:
+          name: itm-ps-config
+      - name: ps-models
+        persistentVolumeClaim:
+          claimName: {{ .Values.pipeline_server.volumes.models.pvc_name }}
+      - name: itm-ps-config
+        configMap:
+          name: itm-ps-config
+      - name: ps-res
+        persistentVolumeClaim:
+          claimName: {{ .Values.pipeline_server.volumes.res.pvc_name }}
+
+---

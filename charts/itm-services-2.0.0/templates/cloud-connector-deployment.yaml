@@ -1,0 +1,74 @@
+# Copyright 2022 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: {{ .Values.cloud_connector.name }}
+  name: {{ .Values.cloud_connector.name }}
+  namespace: {{ .Values.namespace }}
+
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Values.cloud_connector.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.cloud_connector.name }}
+        role: itm
+    spec:
+      containers:
+      - name: {{ .Values.cloud_connector.name }}
+        image: {{ .Values.images.registry }}{{ .Values.images.cloud_connector }}:{{ .Values.images.tag }}
+        imagePullPolicy: {{ .Values.imagePullPolicy }}
+        resources:
+          limits:
+            memory: "256Mi"
+            cpu: "500m"
+        env:
+        - name: SUBSCRIBER_TOPIC
+          value: {{ .Values.rule_engine.topic.publisher }}
+        - name: MQTT_PORT
+          value: "{{ .Values.mqtt.port }}"
+        - name: MQTT_BROKER
+          value: {{ .Values.mqtt.broker }}
+        - name: AWS_KEY
+          value: {{ .Values.cloud_connector.aws_key }}
+        - name: AWS_SECRET
+          value: {{ .Values.cloud_connector.aws_secret }}
+        - name: AWS_BUCKET
+          value: {{ .Values.cloud_connector.aws_bucket }}
+        - name: AWS_BUCKET_REGION
+          value: {{ .Values.cloud_connector.aws_region }}
+        - name: PY_LOG_LEVEL
+          value: "{{ .Values.py_log_level }}"
+        {{- if .Values.proxy.http }}
+        - name: http_proxy
+          value: {{ .Values.proxy.http }}
+        {{- end }}
+        {{- if .Values.proxy.https }}
+        - name: https_proxy
+          value: {{ .Values.proxy.https }}
+        {{- end }}
+        securityContext:
+          readOnlyRootFilesystem: true
+      nodeSelector:
+        node-role.kubernetes.io/master: ""
+      tolerations:
+        - key: "node-role.kubernetes.io/master"
+          operator: "Exists"
+          effect: "NoSchedule"

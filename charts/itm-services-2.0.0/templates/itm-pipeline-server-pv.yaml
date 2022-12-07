@@ -1,0 +1,66 @@
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  namespace: {{ .Values.namespace }}
+  name: {{ .Values.pipeline_server.volumes.models.pv_name }}
+  labels:
+    type: local
+spec:
+  storageClassName: {{ .Values.storageClassName }}
+  claimRef:
+    name: {{ .Values.pipeline_server.volumes.models.pvc_name }}
+    namespace: {{ .Values.namespace }}
+  capacity:
+    storage: {{ .Values.pipeline_server.volumes.models.size }}
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: {{ .Values.pipeline_server.volumes.models.hostpath }}
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  namespace: {{ .Values.namespace }}
+  name: {{ .Values.pipeline_server.volumes.res.pv_name }}
+  labels:
+    type: local
+spec:
+  storageClassName: {{ .Values.storageClassName }}
+  claimRef:
+    name: {{ .Values.pipeline_server.volumes.res.pvc_name }}
+    namespace: {{ .Values.namespace }}
+  capacity:
+    storage: {{ .Values.pipeline_server.volumes.res.size }}
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: {{ .Values.pipeline_server.volumes.res.hostpath }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  namespace: {{ .Values.namespace }}
+  name: {{ .Values.pipeline_server.volumes.models.pvc_name }}
+spec:
+  storageClassName: {{ .Values.storageClassName }}
+  volumeName: {{ .Values.pipeline_server.volumes.models.pv_name }}
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.pipeline_server.volumes.models.size }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  namespace: {{ .Values.namespace }}
+  name: {{ .Values.pipeline_server.volumes.res.pvc_name }}
+spec:
+  storageClassName: {{ .Values.storageClassName }}
+  volumeName: {{ .Values.pipeline_server.volumes.res.pv_name }}
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.pipeline_server.volumes.res.size }}
