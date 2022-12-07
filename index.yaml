@@ -368,6 +368,17 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/intel-device-plugins-sgx-0.24.0/intel-device-plugins-sgx-0.24.0.tgz
     version: 0.24.0
+  itm-mqtt-broker:
+  - apiVersion: v2
+    appVersion: 1.0.0
+    created: "2022-12-07T12:40:09.594654404Z"
+    description: Helm chart for HiveMQ broker
+    digest: 1fec4e9b816ef37f83a94dcb0c9e50d17cb077a6e2305498f06deb7c94617abd
+    name: itm-mqtt-broker
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/itm-mqtt-broker-1.0.0/itm-mqtt-broker-1.0.0.tgz
+    version: 1.0.0
   itm-services:
   - apiVersion: v2
     appVersion: 7.0.0
@@ -603,4 +614,4 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/vault-0.8.0/vault-0.8.0.tgz
     version: 0.8.0
-generated: "2022-12-07T09:54:53.029239944Z"
+generated: "2022-12-07T12:40:09.595114211Z"
