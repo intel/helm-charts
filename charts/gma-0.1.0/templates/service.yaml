@@ -1,0 +1,42 @@
+# INTEL CONFIDENTIAL
+#
+# Copyright (C) 2022 Intel Corporation.
+#
+# This software and the related documents are Intel copyrighted materials, and your use of
+# them is governed by the express license under which they were provided to you ("License").
+# Unless the License provides otherwise, you may not use, modify, copy, publish, distribute,
+# disclose or transmit this software or the related documents without Intel's prior written permission.
+#
+# This software and the related documents are provided as is, with no express or implied warranties,
+# other than those that are expressly stated in the License.
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "gma.fullname" . }}
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "gma.labels" . | nindent 4 }}
+spec:
+  ports:
+    - name: tcp10020
+      port: 10020
+      protocol: TCP
+    - name: udp10020
+      port: 10020
+      protocol: UDP
+    - name: tcp10021
+      port: 10021
+      protocol: TCP
+    - name: udp10021
+      port: 10021
+      protocol: UDP
+    - name: tcp10022
+      port: 10022
+      protocol: TCP
+    - name: udp10022
+      port: 10022
+      protocol: UDP
+  selector:   
+      {{- include "gma.selectorLabels" . | nindent 4 }}
