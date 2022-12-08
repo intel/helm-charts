@@ -10,12 +10,12 @@ You can execute `helm search repo intel` command to see pulled charts [optional]
 
 ## Install Helm Chart
 ```
-helm install qat-device-plugin intel/qat-device-plugin [flags]
+helm install qat-device-plugin intel/intel-device-plugins-qat [flags]
 ```
 
 ## Upgrade Chart
 ```
-helm upgrade qat-device-plugin intel/qat-device-plugin [flags]
+helm upgrade qat-device-plugin intel/intel-device-plugins-qat [flags]
 ```
 
 ## Uninstall Chart
@@ -27,7 +27,7 @@ helm uninstall qat-device-plugin
 See [Customizing the Chart Before Installing](https://helm.sh/docs/intro/using_helm/#customizing-the-chart-before-installing). To see all configurable options with detailed comments:
 
 ```console
-helm show values intel/qat-device-plugin
+helm show values intel/intel-device-plugins-qat
 ```
 
 You may also run `helm show values` on this chart's dependencies for additional options.
