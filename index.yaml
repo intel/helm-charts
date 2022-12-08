@@ -428,6 +428,17 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/load-generator-0.1.2/load-generator-0.1.2.tgz
     version: 0.1.2
+  map5g:
+  - apiVersion: v2
+    appVersion: "1.0"
+    created: "2022-12-08T06:04:37.109391159Z"
+    description: A Helm chart for Kubernetes
+    digest: 5e9b556f9ca28557e90eae389858840b2540e9cb18dab8347de8117cacae39d0
+    name: map5g
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/map5g-1.0.0/map5g-1.0.0.tgz
+    version: 1.0.0
   multimodal-data-visualization:
   - apiVersion: v2
     appVersion: 3.0.0
@@ -625,4 +636,4 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/vault-0.8.0/vault-0.8.0.tgz
     version: 0.8.0
-generated: "2022-12-08T05:42:36.899507847Z"
+generated: "2022-12-08T06:04:37.109729661Z"
