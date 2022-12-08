@@ -1,0 +1,59 @@
+# INTEL CONFIDENTIAL
+#
+# Copyright (C) 2022 Intel Corporation.
+#
+# This software and the related documents are Intel copyrighted materials, and your use of
+# them is governed by the express license under which they were provided to you ("License").
+# Unless the License provides otherwise, you may not use, modify, copy, publish, distribute,
+# disclose or transmit this software or the related documents without Intel's prior written permission.
+#
+# This software and the related documents are provided as is, with no express or implied warranties,
+# other than those that are expressly stated in the License.
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "gma.fullname" . }}
+  labels:
+    {{- include "gma.labels" . | nindent 4 }}
+  namespace: {{ .Values.namespace }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "gma.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "gma.selectorLabels" . | nindent 8 }}
+      annotations:
+        k8s.v1.cni.cncf.io/networks: sriov-net-gma5g,sriov-net-gmawifi
+    spec:
+      containers:
+      - name: {{ .Chart.Name }}
+        image: "{{ .Values.image.repository }}:{{ .Values.image.version }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        resources:
+          limits:
+            cpu: {{ .Values.cpu }}
+            memory: {{ .Values.memory }}
+            intel.com/intel_sriov_10G_VEDIOSTREAM: '1'
+            intel.com/intel_sriov_WIFI_GMA: '1'
+          requests:
+            cpu: {{ .Values.cpu }}
+            memory: {{ .Values.memory }}
+            intel.com/intel_sriov_10G_VEDIOSTREAM: '1'
+            intel.com/intel_sriov_WIFI_GMA: '1'
+        securityContext:
+          capabilities:
+            add:
+            - NET_ADMIN
+          privileged: true       
+        ports:
+        - containerPort: 10020
+        - containerPort: 10021
+        - containerPort: 10022
+      nodeSelector:
+          feature.node.kubernetes.io/cpu-cpuid.AVX512VNNI: "true"
+          feature.node.kubernetes.io/cpu-cpuid.AVX2: "true"
