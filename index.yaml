@@ -111,6 +111,17 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/fm-worker-0.8.0/fm-worker-0.8.0.tgz
     version: 0.8.0
+  gma:
+  - apiVersion: v2
+    appVersion: "1.0"
+    created: "2022-12-08T05:42:36.899448145Z"
+    description: A Helm chart for Kubernetes
+    digest: da95a17c12af939ab1a93bbe81c1439c70b9f21bc07d7474cbff3cbd7bcc3612
+    name: gma
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/gma-0.1.0/gma-0.1.0.tgz
+    version: 0.1.0
   intel-device-plugins-dlb:
   - apiVersion: v2
     appVersion: 0.25.0
@@ -614,4 +625,4 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/vault-0.8.0/vault-0.8.0.tgz
     version: 0.8.0
-generated: "2022-12-07T12:40:09.595114211Z"
+generated: "2022-12-08T05:42:36.899507847Z"
