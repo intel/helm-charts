@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "msatest-helm-loc.fullname" . }}
+  labels:
+    {{- include "msatest-helm-loc.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "msatest-helm-loc.selectorLabels" . | nindent 4 }}
