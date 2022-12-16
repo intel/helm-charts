@@ -785,6 +785,16 @@ entries:
   storage-rest:
   - apiVersion: v2
     appVersion: 1.16.0
+    created: "2022-12-16T11:53:34.702208473Z"
+    description: A Helm chart for Kubernetes
+    digest: 9de664fd687b33662b386f908ca28014789a843d07ce4874ed3bc1cfcb2d62e7
+    name: storage-rest
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/storage-rest-0.8.3/storage-rest-0.8.3.tgz
+    version: 0.8.3
+  - apiVersion: v2
+    appVersion: 1.16.0
     created: "2022-11-22T14:56:54.733901049Z"
     description: A Helm chart for Kubernetes
     digest: 1115d8ada5ec60b2a3d3cf9a7c69d8c7e54a8ad237af86022e4f64ced7af144f
@@ -854,4 +864,4 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/vault-0.8.0/vault-0.8.0.tgz
     version: 0.8.0
-generated: "2022-12-16T11:51:18.473121428Z"
+generated: "2022-12-16T11:53:34.702296273Z"
