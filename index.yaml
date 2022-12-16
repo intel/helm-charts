@@ -3,6 +3,16 @@ entries:
   ai-inference:
   - apiVersion: v2
     appVersion: 1.16.0
+    created: "2022-12-16T11:08:49.158612227Z"
+    description: A Helm chart for Kubernetes
+    digest: fc291ee66c34825c96ad51a9ad82bad7a2530c9d48fc94f330d5a50812048684
+    name: ai-inference
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/ai-inference-0.8.2/ai-inference-0.8.2.tgz
+    version: 0.8.2
+  - apiVersion: v2
+    appVersion: 1.16.0
     created: "2022-11-22T03:50:18.967784264Z"
     description: A Helm chart for Kubernetes
     digest: 834269368ef27d234c7677d6a3331a5250f46d56bc1736c17e7054f535202c4e
@@ -706,4 +716,4 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/vault-0.8.0/vault-0.8.0.tgz
     version: 0.8.0
-generated: "2022-12-09T14:17:29.004071918Z"
+generated: "2022-12-16T11:08:49.158696431Z"
