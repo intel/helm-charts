@@ -743,6 +743,16 @@ entries:
   search-image-by-image:
   - apiVersion: v2
     appVersion: 1.16.0
+    created: "2022-12-16T11:49:49.04498013Z"
+    description: A Helm chart for Kubernetes
+    digest: 3f3837f34af1c56a1dd3e37e75c0057676f591975d503a3889edbc34649dbe16
+    name: search-image-by-image
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/search-image-by-image-0.8.3/search-image-by-image-0.8.3.tgz
+    version: 0.8.3
+  - apiVersion: v2
+    appVersion: 1.16.0
     created: "2022-11-22T14:56:54.363166319Z"
     description: A Helm chart for Kubernetes
     digest: 003961f586df1a3fe3385b69c6d81def469d596dfffb21eae42366fca9aa6c1e
@@ -834,4 +844,4 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/vault-0.8.0/vault-0.8.0.tgz
     version: 0.8.0
-generated: "2022-12-16T11:48:28.956967483Z"
+generated: "2022-12-16T11:49:49.045084431Z"
