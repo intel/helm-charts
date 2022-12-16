@@ -705,6 +705,16 @@ entries:
   query-web:
   - apiVersion: v2
     appVersion: 1.16.0
+    created: "2022-12-16T11:48:28.956093276Z"
+    description: A Helm chart for Kubernetes
+    digest: a57dc61c3e37581d5114bed2d088e2e9bd5e0eec43a79dcc093dd452ec08d7a2
+    name: query-web
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/query-web-0.8.3/query-web-0.8.3.tgz
+    version: 0.8.3
+  - apiVersion: v2
+    appVersion: 1.16.0
     created: "2022-11-22T14:56:53.998777201Z"
     description: A Helm chart for Kubernetes
     digest: f7c1de24eeff02f91edfc6097635a31b530ffb7c4c49ffae7626d2d5808337b1
@@ -824,4 +834,4 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/vault-0.8.0/vault-0.8.0.tgz
     version: 0.8.0
-generated: "2022-12-16T11:46:59.930333143Z"
+generated: "2022-12-16T11:48:28.956967483Z"
