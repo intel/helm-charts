@@ -849,6 +849,22 @@ entries:
     version: 0.4.0
   vault:
   - apiVersion: v2
+    appVersion: 1.12.1
+    created: "2022-12-16T11:58:17.280793398Z"
+    dependencies:
+    - name: vault
+      repository: https://helm.releases.hashicorp.com
+      tags:
+      - vault
+      version: 0.23.0
+    description: A Helm chart for Kubernetes
+    digest: 9a80d505cb4493419b18335d5ad0fca4f8a1e991a230038617df2d1800bb71fb
+    name: vault
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/vault-0.8.1/vault-0.8.1.tgz
+    version: 0.8.1
+  - apiVersion: v2
     appVersion: 1.16.0
     created: "2022-11-22T14:56:55.195123059Z"
     dependencies:
@@ -864,4 +880,4 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/vault-0.8.0/vault-0.8.0.tgz
     version: 0.8.0
-generated: "2022-12-16T11:53:34.702296273Z"
+generated: "2022-12-16T11:58:17.2808841Z"
