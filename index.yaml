@@ -684,6 +684,16 @@ entries:
   query-rest:
   - apiVersion: v2
     appVersion: 1.16.0
+    created: "2022-12-16T11:46:59.929912037Z"
+    description: A Helm chart for Kubernetes
+    digest: 4c6a5347177477d0ebf62bb605968c9d8fdc86432ebdacfab935f9e12e110634
+    name: query-rest
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/query-rest-0.8.3/query-rest-0.8.3.tgz
+    version: 0.8.3
+  - apiVersion: v2
+    appVersion: 1.16.0
     created: "2022-11-22T14:56:53.831258452Z"
     description: A Helm chart for Kubernetes
     digest: 88d99e2c9232229a8f66608321ba9ba4444d09ebb37c3290fa8173520607ce6b
@@ -814,4 +824,4 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/vault-0.8.0/vault-0.8.0.tgz
     version: 0.8.0
-generated: "2022-12-16T11:33:00.060321176Z"
+generated: "2022-12-16T11:46:59.930333143Z"
