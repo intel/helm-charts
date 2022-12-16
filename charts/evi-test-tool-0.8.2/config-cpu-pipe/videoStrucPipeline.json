@@ -1,0 +1,128 @@
+{
+    "Nodes": [
+        {
+            "Node Class Name": "StorageVideoInputNode",
+            "Node Name": "Input",
+            "Thread Number": "1",
+            "Is Source Node": "true"
+        },
+        {
+            "Node Class Name": "VideoDecoderNode",
+            "Node Name": "Decoder",
+            "Thread Number": "1",
+            "Is Source Node": "false"
+        },
+        {
+            "Node Class Name": "DetectionNode_CPU",
+            "Node Name": "Detection",
+            "Thread Number": "1",
+            "Is Source Node": "false",
+            "Configure String": "InferReqNumber=(INT)6;InferStreams=(INT)6;ModelPath=(STRING)vehicle-detection-evi-0.0.1/FP16-INT8/vehicle-detection-evi-001.xml;Threshold=(FLOAT)0.8;MaxROI=(INT)0;Converter=(STRING)SSD;Labels=(STRING_ARRAY)[vehicle]"
+        },
+        {
+            "Node Class Name": "TrackerNode_CPU",
+            "Node Name": "Tracker",
+            "Thread Number": "1",
+            "Is Source Node": "false",
+            "Configure String": "DropLen=(INT)5;ConfDecay=(FLOAT)0.85;DetectionFrameSkip=(INT)1"
+        },
+        {
+            "Node Class Name": "QualityAssessNode",
+            "Node Name": "QualityAssess",
+            "Thread Number": "1",
+            "Is Source Node": "false",
+            "Configure String": "InferReqNumber=(INT)6;InferStreams=(INT)6;QualityMode=(INT)1;ImageSize=(INT)320;ModelPath=(STRING)vehicle-qnet-0.0.1/FP16/quality-assess-001.xml;InferStreams=(INT)0"
+        },
+        {
+            "Node Class Name": "ObjectSelectNode",
+            "Node Name": "Select",
+            "Thread Number": "1",
+            "Is Source Node": "false",
+            "Configure String": "FrameInterval=(INT)30;TopK=(INT)1"
+        },
+        {
+            "Node Class Name": "StorageImageUploadNode",
+            "Node Name": "UploadImage",
+            "Thread Number": "1",
+            "Is Source Node": "false",
+            "Configure String": "MediaType=(STRING)video;DataSource=(STRING)vehicle"
+        },
+        {
+            "Node Class Name": "AttributeNode_CPU",
+            "Node Name": "Attribute",
+            "Thread Number": "1",
+            "Is Source Node": "false",
+            "Configure String": "InferReqNumber=(INT)6;InferStreams=(INT)6;ModelPath=(STRING)vehicle-attributes-recognition-barrier-0039/FP16-INT8/vehicle-attributes-recognition-barrier-0039.xml;Categories=(STRING_ARRAY)[color,type];color=(STRING_ARRAY)[white,gray,yellow,red,green,blue,black];type=(STRING_ARRAY)[car,bus,truck,van]"
+        },
+        {
+            "Node Class Name": "FeatureExtractionNode_CPU",
+            "Node Name": "FeatureExtraction",
+            "Thread Number": "1",
+            "Is Source Node": "false",
+            "Configure String": "InferReqNumber=(INT)6;InferStreams=(INT)6;ModelPath=(STRING)fe-pytorch-0.0.1.xml;Threshold=(FLOAT)0.1;Quantization_Scale=(FLOAT)411.317"
+        },
+        {
+            "Node Class Name": "LLResultSinkNode",
+            "Node Name": "Output",
+            "Thread Number": "1",
+            "Is Source Node": "false",
+            "Configure String": "BufferType=(STRING)String"
+        }
+    ],
+    "Links": [
+        {
+            "Previous Node": "Input",
+            "Previous Node Port": "0",
+            "Next Node": "Decoder",
+            "Next Node Port": "0"
+        },
+        {
+            "Previous Node": "Decoder",
+            "Previous Node Port": "0",
+            "Next Node": "Detection",
+            "Next Node Port": "0"
+        },
+        {
+            "Previous Node": "Detection",
+            "Previous Node Port": "0",
+            "Next Node": "Tracker",
+            "Next Node Port": "0"
+        },
+        {
+            "Previous Node": "Tracker",
+            "Previous Node Port": "0",
+            "Next Node": "QualityAssess",
+            "Next Node Port": "0"
+        },
+        {
+            "Previous Node": "QualityAssess",
+            "Previous Node Port": "0",
+            "Next Node": "Select",
+            "Next Node Port": "0"
+        },
+        {
+            "Previous Node": "Select",
+            "Previous Node Port": "0",
+            "Next Node": "UploadImage",
+            "Next Node Port": "0"
+        },
+        {
+            "Previous Node": "UploadImage",
+            "Previous Node Port": "0",
+            "Next Node": "Attribute",
+            "Next Node Port": "0"
+        },
+        {
+            "Previous Node": "Attribute",
+            "Previous Node Port": "0",
+            "Next Node": "FeatureExtraction",
+            "Next Node Port": "0"
+        },
+        {
+            "Previous Node": "FeatureExtraction",
+            "Previous Node Port": "0",
+            "Next Node": "Output",
+            "Next Node Port": "0"
+        }
+    ]
+}
