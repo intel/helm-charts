@@ -24,6 +24,16 @@ entries:
   ai-structuring:
   - apiVersion: v2
     appVersion: 1.16.0
+    created: "2022-12-16T11:12:54.920924272Z"
+    description: A Helm chart for Kubernetes
+    digest: d03bdc8b700a9c0fa18eaf204edb2645ee108eb61e926ed9654ec1f62c3a3f2f
+    name: ai-structuring
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/ai-structuring-0.8.2/ai-structuring-0.8.2.tgz
+    version: 0.8.2
+  - apiVersion: v2
+    appVersion: 1.16.0
     created: "2022-11-22T03:53:09.944163056Z"
     description: A Helm chart for Kubernetes
     digest: 9148f03f03c11567c44538cd13229a509724477cc93582ea37a21ddeb5a40bde
@@ -716,4 +726,4 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/vault-0.8.0/vault-0.8.0.tgz
     version: 0.8.0
-generated: "2022-12-16T11:08:49.158696431Z"
+generated: "2022-12-16T11:12:54.921059976Z"
