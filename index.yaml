@@ -44,6 +44,22 @@ entries:
     version: 0.8.0
   consul:
   - apiVersion: v2
+    appVersion: 1.14.2
+    created: "2022-12-16T11:14:53.162333763Z"
+    dependencies:
+    - name: consul
+      repository: https://helm.releases.hashicorp.com
+      tags:
+      - consul
+      version: 1.0.2
+    description: A Helm chart for Kubernetes
+    digest: fd00d408194f64f4c8ca514ecb5b9c259750d4959084439e44259a0dca482f95
+    name: consul
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/consul-0.8.1/consul-0.8.1.tgz
+    version: 0.8.1
+  - apiVersion: v2
     appVersion: 1.16.0
     created: "2022-11-22T15:03:24.325792145Z"
     dependencies:
@@ -726,4 +742,4 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/vault-0.8.0/vault-0.8.0.tgz
     version: 0.8.0
-generated: "2022-12-16T11:12:54.921059976Z"
+generated: "2022-12-16T11:14:53.162433164Z"
