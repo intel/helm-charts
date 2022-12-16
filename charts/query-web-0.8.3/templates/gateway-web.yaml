@@ -1,0 +1,95 @@
+# INTEL CONFIDENTIAL
+#
+# Copyright (C) 2022 Intel Corporation.
+#
+# This software and the related documents are Intel copyrighted materials, and your use of
+# them is governed by the express license under which they were provided to you (License).
+# Unless the License provides otherwise, you may not use, modify, copy, publish, distribute,
+# disclose or transmit this software or the related documents without Intel's prior written permission.
+#
+# This software and the related documents are provided as is, with no express or implied warranties,
+# other than those that are expressly stated in the License.
+
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: DestinationRule
+metadata:
+  namespace: {{ .Values.global.namespace.value }}
+  name: query-web
+  annotations:
+    container.apparmor.security.beta.kubernetes.io/query-web: runtime/default  
+spec:
+  host: its-query-web
+  subsets:
+  - name: v1
+    labels:
+      app: query-web
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: DestinationRule
+metadata:
+  namespace: {{ .Values.global.namespace.value }}
+  name: query-rest
+  annotations:
+    container.apparmor.security.beta.kubernetes.io/query-web: runtime/default
+spec:
+  host: its-query-rest
+  subsets:
+  - name: v1
+    labels:
+      app: query-rest
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  namespace: {{ .Values.global.namespace.value }}
+  name: query-gateway
+  annotations:
+    container.apparmor.security.beta.kubernetes.io/query-web: runtime/default
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+  - port:
+      number: 80
+      name: http
+      protocol: HTTP
+    hosts:
+    - "*"
+  - port:
+      number: 443
+      name: https
+      protocol: HTTPS
+    hosts:
+    - "*"
+    tls: {{- toYaml .Values.gatewayTls | nindent 6 }}
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  namespace: {{ .Values.global.namespace.value }}
+  name: query
+spec:
+  hosts:
+  - "*"
+  gateways:
+  - query-gateway
+  http:
+  - match:
+    - uri:
+        prefix: /api
+    route:
+    - destination:
+        host: its-query-rest
+        port:
+          number: 8080
+  - match:
+    - uri:
+        prefix: /
+    route:
+    - destination:
+        host: its-query-web
+        port:
+          number: 8088
+---
+
