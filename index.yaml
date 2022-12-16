@@ -615,6 +615,23 @@ entries:
   my-keycloak:
   - apiVersion: v2
     appVersion: 1.16.0
+    created: "2022-12-16T11:33:00.060244578Z"
+    dependencies:
+    - condition: keycloak.enabled
+      name: keycloak
+      repository: https://charts.bitnami.com/bitnami
+      tags:
+      - keycloak
+      version: 9.7.1
+    description: A Helm chart for Kubernetes
+    digest: ae3f03af7f763c7443e0cfb94a63f9eb79eb660567ba363633475877a0986238
+    name: my-keycloak
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/my-keycloak-0.8.1/my-keycloak-0.8.1.tgz
+    version: 0.8.1
+  - apiVersion: v2
+    appVersion: 1.16.0
     created: "2022-11-22T14:56:53.214512759Z"
     dependencies:
     - condition: keycloak.enabled
@@ -797,4 +814,4 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/vault-0.8.0/vault-0.8.0.tgz
     version: 0.8.0
-generated: "2022-12-16T11:22:53.11598618Z"
+generated: "2022-12-16T11:33:00.060321176Z"
