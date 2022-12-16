@@ -764,6 +764,16 @@ entries:
   spark-cluster:
   - apiVersion: v2
     appVersion: 1.16.0
+    created: "2022-12-16T11:51:18.473013021Z"
+    description: A Helm chart for Kubernetes
+    digest: 0dda1bda992fecd9053274608114b781c71de6410537980ed10d9f42354d05b3
+    name: spark-cluster
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/spark-cluster-0.8.3/spark-cluster-0.8.3.tgz
+    version: 0.8.3
+  - apiVersion: v2
+    appVersion: 1.16.0
     created: "2022-11-22T14:56:54.54992092Z"
     description: A Helm chart for Kubernetes
     digest: 28520e6950f4ca8a159b8d0c6073984f31b90dd6200cd90b6c5843a95a1c5ae9
@@ -844,4 +854,4 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/vault-0.8.0/vault-0.8.0.tgz
     version: 0.8.0
-generated: "2022-12-16T11:49:49.045084431Z"
+generated: "2022-12-16T11:51:18.473121428Z"
