@@ -1,0 +1,59 @@
+# INTEL CONFIDENTIAL
+#
+# Copyright (C) 2022 Intel Corporation.
+#
+# This software and the related documents are Intel copyrighted materials, and your use of
+# them is governed by the express license under which they were provided to you (License).
+# Unless the License provides otherwise, you may not use, modify, copy, publish, distribute,
+# disclose or transmit this software or the related documents without Intel's prior written permission.
+#
+# This software and the related documents are provided as is, with no express or implied warranties,
+# other than those that are expressly stated in the License.
+
+---
+tags:
+  minio: true
+
+nameOverride: evi-minio
+
+minio:
+  global:
+    namespace:
+      create: true
+      value: minio
+
+  mode: standalone
+
+  rootUser: ""
+  rootPassword: ""
+
+  replicas: 1
+
+  tls:
+    enabled: true
+    certSecret: "tls-ssl-minio"
+    publicCrt: public.crt
+    privateKey: private.key
+
+  capacity: 10Gi
+
+  resources:
+    requests:
+      memory: 2Gi
+
+  persistence:
+    enabled: true
+    storageClass: "direct.csi.min.io"
+    accessMode: ReadWriteOnce
+    size: 10Gi
+
+  storagePath: "/mnt/minio/data"
+
+  hostname: "nodea"
+
+  environment:
+    MINIO_KMS_KES_ENDPOINT: https://evi-kes-svc.smartedge-apps.svc.cluster.local::7373
+    MINIO_KMS_KES_KEY_FILE: /etc/minio/certs/private.key
+    MINIO_KMS_KES_CERT_FILE: /etc/minio/certs/public.crt
+    MINIO_KMS_KES_KEY_NAME: minio-key-1
+    MINIO_KMS_KES_CA_PATH: /etc/minio/certs/public.crt
