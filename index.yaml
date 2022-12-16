@@ -558,6 +558,16 @@ entries:
     version: 2.0.0
   kes:
   - apiVersion: v2
+    appVersion: 0.22.2
+    created: "2022-12-16T11:22:53.115805077Z"
+    description: A Helm chart for Kubernetes
+    digest: 4ae44218ef446b938f91708d498ddd4f814780e07772aab154d656906b5a4451
+    name: kes
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/kes-0.8.3/kes-0.8.3.tgz
+    version: 0.8.3
+  - apiVersion: v2
     appVersion: 1.16.0
     created: "2022-11-22T14:56:52.981597515Z"
     description: A Helm chart for Kubernetes
@@ -787,4 +797,4 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/vault-0.8.0/vault-0.8.0.tgz
     version: 0.8.0
-generated: "2022-12-16T11:21:27.553001405Z"
+generated: "2022-12-16T11:22:53.11598618Z"
