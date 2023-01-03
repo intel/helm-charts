@@ -1,0 +1,189 @@
+# Copyright (c) 2021 Intel Corporation.
+
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+{{- $global := . -}}
+{{- range $instance_idx := until (int .Values.num_video_instances) -}}
+{{- $instance := "" }}
+{{- $publish_port := "" }}
+{{- $server_port := "" }}
+{{- if eq (int $global.Values.num_video_instances) 1 }}
+{{- $publish_port = $global.Values.config.video_ingestion.publish_port }}
+{{- $server_port = $global.Values.config.video_ingestion.server_port }}
+{{- $instance = "" }}
+{{- end }}
+{{- if gt (int $global.Values.num_video_instances) 1 }}
+{{- $publish_port = add $global.Values.config.video_ingestion.publish_port $instance_idx }}
+{{- $server_port = add $global.Values.config.video_ingestion.server_port  $instance_idx }}
+{{- $instance = add 1 $instance_idx }}
+{{- end }}
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $global.Values.config.video_ingestion.name }}{{ $instance }}
+  namespace: {{ $global.Values.namespace }}
+spec:
+  ports:
+  - port: {{ $publish_port }}
+    name: tcp
+  selector:
+    app: video{{ $instance }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: video{{ $instance }}
+  name: deployment-video-ingestion{{ $instance }}
+  namespace: {{ $global.Values.namespace }}
+
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: video{{ $instance }}
+  template:
+    metadata:
+      labels:
+        app: video{{ $instance }}
+      {{ if eq $global.Values.config.video_ingestion.gige_camera true }}
+      annotations:
+        k8s.v1.cni.cncf.io/networks: macvlan-conf
+      {{ end }}
+
+
+    spec:
+      nodeSelector:
+        feature.node.kubernetes.io/system-os_release.ID: "ubuntu"
+      {{- if eq $global.Values.config.video_ingestion.accelerator "hddl" }}
+      nodeSelector:
+        hddl: "true"
+      {{- else if eq $global.Values.config.video_ingestion.accelerator "ncs2" }}
+      nodeSelector:
+        ncs2: "true"
+      {{- end }}
+      {{- if and $global.Values.DOCKER_USERNAME $global.Values.DOCKER_PASSWORD }}
+      imagePullSecrets:
+      - name: registryauth
+      {{- end }}
+      containers:
+      - name: ia-video-ingestion{{ $instance }}
+        image: {{ $global.Values.DOCKER_REGISTRY }}openedgeinsights/ia_video_ingestion:{{ $global.Values.EII_VERSION }}
+        imagePullPolicy: {{ $global.Values.imagePullPolicy }}
+        volumeMounts:
+        - name: dev
+          mountPath: /dev
+        - name: dev-shm
+          mountPath: /dev/shm
+        - name: tmp
+          mountPath: /tmp
+        - name: var-tmp
+          mountPath: /var/tmp
+        - name: run-udev
+          mountPath: /run/udev
+        {{- if eq $global.Values.config.video_ingestion.IPC true}}
+        - name: {{ $global.Values.volumes.eii_socket.name }}
+          mountPath: {{ $global.Values.volumes.eii_socket.location }}
+        {{- end }}
+        {{ if eq $global.Values.env.DEV_MODE false}}
+        - name: etcd-certs
+          mountPath: /run/secrets/etcd/
+        {{ end }}
+        env:
+        - name: AppName
+          value: 'VideoIngestion{{ $instance }}'
+        - name: DEV_MODE
+          value: '{{ $global.Values.env.DEV_MODE }}'
+        - name: PROFILING_MODE
+          value: '{{ $global.Values.env.PROFILING_MODE }}'
+        - name: ETCD_HOST
+          value: {{ $global.Values.config.etcd.name }}
+        - name: ETCD_CLIENT_PORT
+          value: '{{ $global.Values.config.etcd.client_port }}'
+        - name:  ETCD_PREFIX
+          value: ''
+        - name: PIPELINE
+          value: '{{ $global.Values.env.PIPELINE }}'
+        - name:  GENICAM
+          value: 'Matrix_Vision'
+        {{- if eq $global.Values.config.video_ingestion.IPC false}}
+        - name: PUBLISHER_ENDPOINT
+          value: "0.0.0.0:{{ $publish_port }}"
+        - name: PUBLISHER_TYPE
+          value: "zmq_tcp"
+        - name: SERVER_ENDPOINT
+          value: "0.0.0.0:{{ $server_port }}"
+        - name: SERVER_TYPE
+          value: "zmq_tcp"
+        {{- else }}
+        - name: PUBLISHER_ENDPOINT
+          value: "{{ $global.Values.env.SOCKET_DIR }}"
+        - name: PUBLISHER_TYPE
+          value: "zmq_ipc"
+        - name: SERVER_ENDPOINT
+          value: "{{ $global.Values.env.SOCKET_DIR }}"
+        - name: SERVER_TYPE
+          value: "zmq_ipc"
+        {{- end }}
+        {{ if eq $global.Values.env.DEV_MODE false}}
+        - name: CONFIGMGR_CACERT
+          value: "/run/secrets/etcd/cacert.pem"
+        - name: CONFIGMGR_CERT
+          value: "/run/secrets/etcd/VideoIngestion{{ $instance }}_client_certificate.pem"
+        - name: CONFIGMGR_KEY
+          value: "/run/secrets/etcd/VideoIngestion{{ $instance }}_client_key.pem"
+        {{ end }}
+
+      volumes:
+      - name: dev
+        hostPath:
+          path: /dev
+      - name: dev-shm
+        hostPath:
+          path: /dev/shm
+      - name: tmp
+        hostPath:
+          path: /tmp
+      - name: var-tmp
+        hostPath:
+          path: /var/tmp
+      - name: run-udev
+        hostPath:
+          path: /run/udev
+
+      {{- if eq $global.Values.config.video_ingestion.IPC true}}
+      - name: {{ $global.Values.volumes.eii_socket.name }}
+        persistentVolumeClaim:
+          claimName: {{ $global.Values.volumes.eii_socket.name }}
+      {{- end }}
+      {{ if eq $global.Values.env.DEV_MODE false}}
+      - name: etcd-certs
+        secret:
+          secretName: eii-certs
+          items:
+          - key: cacert.pem
+            path: cacert.pem
+          - key: VideoIngestion{{ $instance }}_client_certificate.pem
+            path: VideoIngestion{{ $instance }}_client_certificate.pem
+          - key: VideoIngestion{{ $instance }}_client_key.pem
+            path: VideoIngestion{{ $instance }}_client_key.pem
+      {{ end }}
+---
+{{- end }}

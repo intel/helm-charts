@@ -1,0 +1,84 @@
+# Copyright (c) 2021 Intel Corporation.
+
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+namespace: default
+EII_VERSION: '3.0'
+DOCKER_REGISTRY: ''
+DOCKER_USERNAME: ''
+DOCKER_PASSWORD: ''
+imagePullPolicy: IfNotPresent
+storageClassName: manual
+num_video_instances: 1
+env:
+  DEV_MODE: true
+  PROFILING_MODE: false
+  EII_INSTALL_PATH: /opt/intel/eii
+  EII_USER_NAME: eiiuser
+  EII_HOME_DIR: ''
+  SOCKET_DIR: /EII/sockets
+  HOST_IP:  
+  config_agent_service: EtcdUI,VideoIngestion,VideoAnalytics,Visualizer,WebVisualizer,Grafana
+  INFLUXDB_USERNAME: ''
+  INFLUXDB_PASSWORD: ''
+  WEBVISUALIZER_USERNAME: ''
+  WEBVISUALIZER_PASSWORD: ''
+  MINIO_ACCESS_KEY: ''
+  MINIO_SECRET_KEY: ''
+  ETCDROOT_PASSWORD: eii123
+  PIPELINE: ''
+  HTTP_METHOD_FETCH_METADATA: GET
+config:
+  etcd:
+    name: configmgragent
+    client_port: 8379
+    peer_port: 8380
+    ext:
+      client_port: 32379
+  etcd_ui:
+    name: etcd-ui
+    int_port: 7071
+    ext_port: 30010
+  video_ingestion:
+    name: videoingestion
+    publish_port: 65012
+    server_port: 64013
+    IPC: false
+    gige_camera: false
+    accelerator: ""
+  video_analytics:
+    name: videoanalytics
+    publish_port: 65013
+    IPC: false
+    accelerator: ""
+  web_visualizer:
+    name: webvisualizer
+    int:
+      https_port: 5000
+      http_port: 5001
+    ext:
+      https_port: 30007
+      http_port: 30009
+    IPC: false
+volumes:
+  eii_socket:
+    name: vol-eii-socket
+    size: 10Mi
+    location: "/EII/sockets"
+    hostpath: "/opt/intel/eii/sockets"
