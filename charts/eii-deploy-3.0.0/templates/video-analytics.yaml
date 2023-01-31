@@ -1,0 +1,176 @@
+# Copyright (c) 2021 Intel Corporation.
+
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+{{- $global := . -}}
+{{- range $instance_idx := until (int .Values.num_video_instances) -}}
+{{- $instance := "" }}
+{{- $publish_port := "" }}
+{{- $subscriber_port := "" }}
+{{- if eq (int $global.Values.num_video_instances) 1 }}
+{{- $publish_port = $global.Values.config.video_analytics.publish_port }}
+{{- $subscriber_port = $global.Values.config.video_ingestion.publish_port }}
+{{- $instance = "" }}
+{{- end }}
+{{- if gt (int $global.Values.num_video_instances) 1 }}
+{{- $publish_port = add $global.Values.config.video_analytics.publish_port $instance_idx }}
+{{- $subscriber_port = add $global.Values.config.video_ingestion.publish_port  $instance_idx }}
+{{- $instance = add 1 $instance_idx }}
+{{- end }}
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $global.Values.config.video_analytics.name }}{{ $instance }}
+  namespace: {{ $global.Values.namespace }}
+spec:
+  ports:
+  - port: {{ $publish_port }}
+    name: tcp
+  selector:
+    app: videoanalytics{{ $instance }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: videoanalytics{{ $instance }}
+  name: deployment-video-analytics{{ $instance }}
+  namespace: {{ $global.Values.namespace }}
+
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: videoanalytics{{ $instance }}
+  template:
+    metadata:
+      labels:
+        app: videoanalytics{{ $instance }}
+    spec:
+      nodeSelector:
+        feature.node.kubernetes.io/cpu-cpuid.AVX512VNNI: "true"
+        feature.node.kubernetes.io/system-os_release.ID: "ubuntu"
+      {{- if eq $global.Values.config.video_ingestion.accelerator "hddl" }}
+      nodeSelector:
+        hddl: "true"
+      {{- else if eq $global.Values.config.video_ingestion.accelerator "ncs2" }}
+      nodeSelector:
+        ncs2: "true"
+      {{- end }}
+      {{- if and $global.Values.DOCKER_USERNAME $global.Values.DOCKER_PASSWORD }}
+      imagePullSecrets:
+      - name: registryauth
+      {{- end }}
+      containers:
+      - name: ia-video-analytics{{ $instance }}
+        image: {{ $global.Values.DOCKER_REGISTRY }}openedgeinsights/ia_video_analytics:{{ $global.Values.EII_VERSION }}
+        imagePullPolicy: {{ $global.Values.imagePullPolicy }}
+        volumeMounts:
+        - name: dev
+          mountPath: /dev
+        - name: dev-shm
+          mountPath: /dev/shm
+        - name: tmp
+          mountPath: /tmp
+        - name: var-tmp
+          mountPath: /var/tmp
+
+        {{- if eq $global.Values.config.video_analytics.IPC true}}
+        - name: {{ $global.Values.volumes.eii_socket.name }}
+          mountPath: {{ $global.Values.volumes.eii_socket.location }}
+        {{- end }}
+        {{ if eq $global.Values.env.DEV_MODE false}}
+        - name: etcd-certs
+          mountPath: /run/secrets/etcd/
+        {{ end }}
+
+        env:
+        - name: AppName
+          value: "VideoAnalytics{{ $instance }}"
+        - name: DEV_MODE
+          value: '{{ $global.Values.env.DEV_MODE }}'
+        - name: PROFILING_MODE
+          value: '{{ $global.Values.env.PROFILING_MODE }}'
+        - name: ETCD_HOST
+          value: {{ $global.Values.config.etcd.name }}
+        - name: ETCD_CLIENT_PORT
+          value: '{{ $global.Values.config.etcd.client_port }}'
+        {{- if eq $global.Values.config.video_analytics.IPC false}}
+        - name: SUBSCRIBER_ENDPOINT
+          value: "{{ $global.Values.config.video_ingestion.name }}{{ $instance }}:{{ $subscriber_port }}"
+        - name: SUBSCRIBER_TYPE
+          value: "zmq_tcp"
+        - name: PUBLISHER_ENDPOINT
+          value: "0.0.0.0:{{ $publish_port }}"
+        - name: PUBLISHER_TYPE
+          value: "zmq_tcp"
+        {{- else }}
+        - name: SUBSCRIBER_ENDPOINT
+          value: "{{ $global.Values.env.SOCKET_DIR }}"
+        - name: SUBSCRIBER_TYPE
+          value: "zmq_ipc"
+        - name: PUBLISHER_ENDPOINT
+          value: "{{ $global.Values.env.SOCKET_DIR }}"
+        - name: PUBLISHER_TYPE
+          value: "zmq_ipc"
+        {{- end }}
+
+        {{ if eq $global.Values.env.DEV_MODE false}}
+        - name: CONFIGMGR_CACERT
+          value: "/run/secrets/etcd/cacert.pem"
+        - name: CONFIGMGR_CERT
+          value: "/run/secrets/etcd/VideoAnalytics{{ $instance }}_client_certificate.pem"
+        - name: CONFIGMGR_KEY
+          value: "/run/secrets/etcd/VideoAnalytics{{ $instance }}_client_key.pem"
+        {{ end }}
+
+      volumes:
+      - name: dev
+        hostPath:
+          path: /dev
+      - name: dev-shm
+        hostPath:
+          path: /dev/shm
+      - name: tmp
+        hostPath:
+          path: /tmp
+      - name: var-tmp
+        hostPath:
+          path: /var/tmp
+
+      {{- if eq $global.Values.config.video_analytics.IPC true}}
+      - name: {{ $global.Values.volumes.eii_socket.name }}
+        persistentVolumeClaim:
+          claimName: {{ $global.Values.volumes.eii_socket.name }}
+      {{- end }}
+      {{ if eq $global.Values.env.DEV_MODE false}}
+      - name: etcd-certs
+        secret:
+          secretName: eii-certs
+          items:
+          - key: cacert.pem
+            path: cacert.pem
+          - key: VideoAnalytics{{ $instance }}_client_certificate.pem
+            path: VideoAnalytics{{ $instance }}_client_certificate.pem
+          - key: VideoAnalytics{{ $instance }}_client_key.pem
+            path: VideoAnalytics{{ $instance }}_client_key.pem
+      {{ end }}
+---
+{{- end }}

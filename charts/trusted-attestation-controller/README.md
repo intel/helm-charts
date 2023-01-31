@@ -127,5 +127,5 @@ EOF
 Install the chart with your new values:
 
 ```console
-helm installl -f values.yaml tac intel/trusted-attestation-controller -n intel-system --create-namespace
+helm install -f values.yaml tac intel/trusted-attestation-controller -n intel-system --create-namespace
 ```
