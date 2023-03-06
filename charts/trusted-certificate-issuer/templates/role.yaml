@@ -82,6 +82,14 @@ rules:
   - update
   - watch
 - apiGroups:
+  - ""
+  resources:
+  - secrets/finalizers
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
   - cert-manager.io
   resources:
   - certificaterequests
