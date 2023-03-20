@@ -1,3 +1,4 @@
+{{- if .Values.nfd.enabled }}
 apiVersion: nfd.k8s-sigs.io/v1alpha1
 kind: NodeFeatureRule
 metadata:
@@ -92,3 +93,4 @@ spec:
                 - "0f01"
                 - "0f02"
       name: intel.gpu.flex.series
+{{- end }}
