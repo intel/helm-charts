@@ -652,6 +652,16 @@ entries:
   intel-device-plugins-sgx:
   - apiVersion: v2
     appVersion: 0.27.0
+    created: "2023-06-12T06:03:50.492716558Z"
+    description: A Helm chart for Intel SGX Device Plugin
+    digest: c26830e2ab76e71ee65f2550685c5b71588fb1157084dca8acb9738742db8f9b
+    name: intel-device-plugins-sgx
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/intel-device-plugins-sgx-0.27.1-helm.0/intel-device-plugins-sgx-0.27.1-helm.0.tgz
+    version: 0.27.1-helm.0
+  - apiVersion: v2
+    appVersion: 0.27.0
     created: "2023-06-09T16:02:03.377315231Z"
     description: A Helm chart for Intel SGX Device Plugin
     digest: 8bca57836aea515c75e0cfa84f4acdff0d060bc106e29688d909a0d137b1ddb5
@@ -1101,4 +1111,4 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/vault-0.8.0/vault-0.8.0.tgz
     version: 0.8.0
-generated: "2023-06-09T16:02:03.377626538Z"
+generated: "2023-06-12T06:03:50.493090933Z"
