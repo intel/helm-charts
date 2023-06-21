@@ -2,5 +2,5 @@ apiVersion: v2
 name: intel-device-plugins-qat
 description: A Helm chart for Intel QAT Device Plugin
 type: application
-version: 0.27.0
-appVersion: "0.27.0"
+version: 0.27.1
+appVersion: "0.27.1"
