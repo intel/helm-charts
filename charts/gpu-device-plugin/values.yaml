@@ -5,6 +5,7 @@ image:
   tag: ""
 
 initImage:
+  enable: false
   hub: intel
   tag: ""
 
