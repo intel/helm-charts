@@ -33,6 +33,8 @@ You may also run `helm show values` on this chart's dependencies for additional 
 
 |parameter| value |
 |---------|-----------|
-| `hub` | `intel` |
-| `tag` | `` |
+| `image.hub` | `intel` |
+| `image.tag` | `` |
+| `initImage.hub` | `intel` |
+| `initImage.tag` | `` |
 | `logLevel` | `4` |
