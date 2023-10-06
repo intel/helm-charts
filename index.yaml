@@ -368,6 +368,16 @@ entries:
   intel-device-plugins-gpu:
   - apiVersion: v2
     appVersion: 0.28.0
+    created: "2023-10-06T09:32:19.308679515Z"
+    description: A Helm chart for Intel GPU Device Plugin
+    digest: c00971ece048a43cc8ba317f71aa14e9fafbfdc6b415721a7b6ee649473a9d97
+    name: intel-device-plugins-gpu
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/intel-device-plugins-gpu-0.28.1-helm.0/intel-device-plugins-gpu-0.28.1-helm.0.tgz
+    version: 0.28.1-helm.0
+  - apiVersion: v2
+    appVersion: 0.28.0
     created: "2023-09-26T14:11:08.863878345Z"
     description: A Helm chart for Intel GPU Device Plugin
     digest: 4126028423ea2d48dc7af5ecf6648d6b35ef39198247893847da79a08f061171
@@ -1251,4 +1261,4 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/vault-0.8.0/vault-0.8.0.tgz
     version: 0.8.0
-generated: "2023-09-26T14:11:09.75631209Z"
+generated: "2023-10-06T09:32:19.309070538Z"
