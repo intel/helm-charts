@@ -1,0 +1,6 @@
+{
+    "version": 1,
+    "hbaseAddr": "hbaseAddr_placeholder",
+    "hbasePort": hbasePort_placeholder,
+    "storageRestAddr": "storageRestAddr_placeholder"
+}
