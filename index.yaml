@@ -131,6 +131,23 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/evi-clustering-archiving-0.8.4/evi-clustering-archiving-0.8.4.tgz
     version: 0.8.4
+  evi-consul:
+  - apiVersion: v2
+    appVersion: 1.14.2
+    created: "2023-10-09T08:23:56.435302742Z"
+    dependencies:
+    - name: consul
+      repository: https://helm.releases.hashicorp.com
+      tags:
+      - consul
+      version: 1.1.1
+    description: A Helm chart for Kubernetes
+    digest: 502e519c03548f0eefcd775efc1acc1a6b33ec588ac32bbe0efbd48f6fb956c0
+    name: evi-consul
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/evi-consul-0.8.3/evi-consul-0.8.3.tgz
+    version: 0.8.3
   evi-minio:
   - apiVersion: v2
     appVersion: 5.0.1
@@ -1294,4 +1311,4 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/vault-0.8.0/vault-0.8.0.tgz
     version: 0.8.0
-generated: "2023-10-09T08:20:32.613398504Z"
+generated: "2023-10-09T08:23:56.436006041Z"
