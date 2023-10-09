@@ -1,0 +1,89 @@
+# INTEL CONFIDENTIAL
+#
+# Copyright (C) 2022 Intel Corporation.
+#
+# This software and the related documents are Intel copyrighted materials, and your use of
+# them is governed by the express license under which they were provided to you (License).
+# Unless the License provides otherwise, you may not use, modify, copy, publish, distribute,
+# disclose or transmit this software or the related documents without Intel's prior written permission.
+#
+# This software and the related documents are provided as is, with no express or implied warranties,
+# other than those that are expressly stated in the License.
+
+---
+{{- if .Values.global.namespace.create -}}
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.global.namespace.value }}
+{{ if .Values.global.namespace.istioInjection.create }}
+  labels:
+    istio-injection: enabled
+{{ end }}
+{{- end -}}
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: evi-ai-structuring
+  namespace: {{ .Values.global.namespace.value }}
+  annotations:
+    container.apparmor.security.beta.kubernetes.io/ai-structuring: runtime/default
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: ai-structuring
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: ai-structuring
+        sidecar.istio.io/inject: "{{ .Values.istioInjection }}"
+        version: v1
+    spec:
+      nodeSelector:
+        feature.node.kubernetes.io/cpu-cpuid.AVX512VNNI: 'true'
+        feature.node.kubernetes.io/cpu-cpuid.AVX2: 'true'
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccountName: {{ .Chart.Name }}
+{{ if .Values.global.nodeAffinity.create }}
+      affinity:
+        nodeAffinity:
+          required:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: {{ .Values.global.nodeAffinity.key }}
+                operator: In
+                values:
+                - {{ .Values.global.nodeAffinity.value }}
+{{ end }}
+      containers:
+      - name: {{ .Chart.Name }}
+        image: "{{ .Values.image.repository }}:{{ .Values.image.Version }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        workingDir: /opt/ai_structuring/build
+        command: ["./ai_structuring"]
+        args: ["0.0.0.0", "{{ .Values.image.containerPort }}", "8", "{{ .Values.aiInference.addr }}", "{{ .Values.aiInference.port }}"]
+        ports:
+          - containerPort: {{ .Values.image.containerPort }}
+        volumeMounts:
+        - name: config-volume
+          mountPath: /opt/ai_structuring/config
+        securityContext:
+          # readOnlyRootFilesystem: true
+          allowPrivilegeEscalation: false
+        resources:
+          limits:
+            cpu: "1"
+            memory: 50Mi
+          requests:
+            cpu: 5m
+            memory: 10Mi
+      volumes:
+        - name: config-volume
+          configMap:
+            name: {{ .Values.configMap.name }}
