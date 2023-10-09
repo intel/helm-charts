@@ -188,6 +188,17 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/evi-hbase-0.8.3/evi-hbase-0.8.3.tgz
     version: 0.8.3
+  evi-kes:
+  - apiVersion: v2
+    appVersion: 2023-04-03T16-41-28Z
+    created: "2023-10-09T08:25:08.29443655Z"
+    description: A Helm chart for Kubernetes
+    digest: ad075c0e7d1ca77a3e660e3f4c12d5f5d028e61d124914f15bd5e638d4a433d6
+    name: evi-kes
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/evi-kes-0.8.4/evi-kes-0.8.4.tgz
+    version: 0.8.4
   evi-minio:
   - apiVersion: v2
     appVersion: 5.0.1
@@ -1351,4 +1362,4 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/vault-0.8.0/vault-0.8.0.tgz
     version: 0.8.0
-generated: "2023-10-09T08:24:25.926630339Z"
+generated: "2023-10-09T08:25:08.294928877Z"
