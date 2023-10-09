@@ -1136,6 +1136,17 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/its-query-web-0.8.4/its-query-web-0.8.4.tgz
     version: 0.8.4
+  its-search-image-by-image:
+  - apiVersion: v2
+    appVersion: 1.16.0
+    created: "2023-10-09T08:38:11.697105765Z"
+    description: A Helm chart for Kubernetes
+    digest: 14444154c3e6b27455b2dd3b9f38b1d41082ee972dbb915f0c530c274192eded
+    name: its-search-image-by-image
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/its-search-image-by-image-0.8.4/its-search-image-by-image-0.8.4.tgz
+    version: 0.8.4
   kes:
   - apiVersion: v2
     appVersion: 0.22.2
@@ -1471,4 +1482,4 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/vault-0.8.0/vault-0.8.0.tgz
     version: 0.8.0
-generated: "2023-10-09T08:37:30.926897343Z"
+generated: "2023-10-09T08:38:11.697521868Z"
