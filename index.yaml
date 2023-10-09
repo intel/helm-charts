@@ -170,6 +170,24 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/evi-fm-worker-0.8.5/evi-fm-worker-0.8.5.tgz
     version: 0.8.5
+  evi-hbase:
+  - apiVersion: v2
+    appVersion: 1.16.0
+    created: "2023-10-09T08:24:25.926253017Z"
+    dependencies:
+    - condition: hbase.enabled
+      name: hbase
+      repository: https://itboy87.github.io/bigdata-charts/
+      tags:
+      - hbase
+      version: 0.1.7
+    description: A Helm chart for Kubernetes
+    digest: 35e1429fe79e23919b4277fd931f1dceca96ca239e904cfca864ee1a2b1398d7
+    name: evi-hbase
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/evi-hbase-0.8.3/evi-hbase-0.8.3.tgz
+    version: 0.8.3
   evi-minio:
   - apiVersion: v2
     appVersion: 5.0.1
@@ -1333,4 +1351,4 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/vault-0.8.0/vault-0.8.0.tgz
     version: 0.8.0
-generated: "2023-10-09T08:24:15.394670741Z"
+generated: "2023-10-09T08:24:25.926630339Z"
