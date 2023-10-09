@@ -263,6 +263,22 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/evi-minio-0.8.0/evi-minio-0.8.0.tgz
     version: 0.8.0
+  evi-postgresql:
+  - apiVersion: v2
+    appVersion: 15.2.0
+    created: "2023-10-09T08:28:55.123583109Z"
+    dependencies:
+    - name: postgresql
+      repository: https://charts.bitnami.com/bitnami
+      tags:
+      - postgresql
+      version: 12.2.7
+    description: A Helm chart for Kubernetes
+    digest: 5a88d9f7803a4f88ac7607f6a7247066234de3c9bc7ae4da87e9f184dfc28b87
+    name: evi-postgresql
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/evi-postgresql-0.8.3/evi-postgresql-0.8.3.tgz
+    version: 0.8.3
   evi-test-tool:
   - apiVersion: v2
     appVersion: 1.16.0
@@ -1395,4 +1411,4 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/vault-0.8.0/vault-0.8.0.tgz
     version: 0.8.0
-generated: "2023-10-09T08:28:23.130977796Z"
+generated: "2023-10-09T08:28:55.123784213Z"
