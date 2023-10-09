@@ -1,0 +1,12 @@
+apiVersion: v2
+appVersion: 7.0.10
+dependencies:
+- name: redis
+  repository: https://charts.bitnami.com/bitnami
+  tags:
+  - redis
+  version: 17.9.3
+description: A Helm chart for Kubernetes
+name: evi-redis
+type: application
+version: 0.8.2
