@@ -296,6 +296,17 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/evi-redis-0.8.2/evi-redis-0.8.2.tgz
     version: 0.8.2
+  evi-storage-rest:
+  - apiVersion: v2
+    appVersion: 1.16.0
+    created: "2023-10-09T08:34:09.395159609Z"
+    description: A Helm chart for Kubernetes
+    digest: bd55a4882f2f112c9b90d12d2502c60e42468af872da70483829e38f475b6a47
+    name: evi-storage-rest
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/evi-storage-rest-0.8.5/evi-storage-rest-0.8.5.tgz
+    version: 0.8.5
   evi-test-tool:
   - apiVersion: v2
     appVersion: 1.16.0
@@ -1428,4 +1439,4 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/vault-0.8.0/vault-0.8.0.tgz
     version: 0.8.0
-generated: "2023-10-09T08:29:33.166060431Z"
+generated: "2023-10-09T08:34:09.395554639Z"
