@@ -1,0 +1,42 @@
+# INTEL CONFIDENTIAL
+#
+# Copyright (C) 2022 Intel Corporation.
+#
+# This software and the related documents are Intel copyrighted materials, and your use of
+# them is governed by the express license under which they were provided to you (License).
+# Unless the License provides otherwise, you may not use, modify, copy, publish, distribute,
+# disclose or transmit this software or the related documents without Intel's prior written permission.
+#
+# This software and the related documents are provided as is, with no express or implied warranties,
+# other than those that are expressly stated in the License.
+
+---
+{{- range $key, $val := .Values.persistance.namenode }}
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: evi-hdfs-nn-{{ $key }}
+  labels:
+    app: namenode
+spec:
+  capacity:
+    storage: {{ required "A valid persistance.namenodeSize is required!" $.Values.persistance.namenodeSize }}
+  accessModes:
+  - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Delete
+  claimRef:
+    namespace: {{ $.Values.namespace.value }}
+    name: dfs-{{ $.Release.Name }}-hadoop-hdfs-nn-{{ $key | trunc -1 }}
+  storageClassName: {{ $.Values.storageClass.name }}
+  local:
+    path: {{ required "A valid persistance.namenode.pv.path is required!" $val.path }}
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: kubernetes.io/hostname
+          operator: In
+          values:
+          - {{ required "A valid persistance.namenode.pv.hostname is required!" $val.hostname }}
+{{- end }}
