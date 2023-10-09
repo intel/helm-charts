@@ -279,6 +279,23 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/evi-postgresql-0.8.3/evi-postgresql-0.8.3.tgz
     version: 0.8.3
+  evi-redis:
+  - apiVersion: v2
+    appVersion: 7.0.10
+    created: "2023-10-09T08:29:33.165789415Z"
+    dependencies:
+    - name: redis
+      repository: https://charts.bitnami.com/bitnami
+      tags:
+      - redis
+      version: 17.9.3
+    description: A Helm chart for Kubernetes
+    digest: 1b2a48b837f4e92b8791b4b61f1f0961d1c62af6c8b7ce051b7c1bc3553fb245
+    name: evi-redis
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/evi-redis-0.8.2/evi-redis-0.8.2.tgz
+    version: 0.8.2
   evi-test-tool:
   - apiVersion: v2
     appVersion: 1.16.0
@@ -1411,4 +1428,4 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/vault-0.8.0/vault-0.8.0.tgz
     version: 0.8.0
-generated: "2023-10-09T08:28:55.123784213Z"
+generated: "2023-10-09T08:29:33.166060431Z"
