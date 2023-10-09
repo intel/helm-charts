@@ -1,0 +1,84 @@
+# INTEL CONFIDENTIAL
+#
+# Copyright (C) 2022 Intel Corporation.
+#
+# This software and the related documents are Intel copyrighted materials, and your use of
+# them is governed by the express license under which they were provided to you (License).
+# Unless the License provides otherwise, you may not use, modify, copy, publish, distribute,
+# disclose or transmit this software or the related documents without Intel's prior written permission.
+#
+# This software and the related documents are provided as is, with no express or implied warranties,
+# other than those that are expressly stated in the License.
+
+---
+{{- if .Values.global.namespace.create -}}
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.global.namespace.value }}
+{{ if .Values.global.namespace.istioInjection.create }}
+  labels:
+    istio-injection: enabled
+{{ end }}
+{{- end -}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: its-query-rest
+  namespace: {{ .Values.global.namespace.value }}
+  labels:
+    version: v1
+  annotations:
+    container.apparmor.security.beta.kubernetes.io/query-rest: runtime/default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: query-rest
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: query-rest
+        sidecar.istio.io/inject: "{{ .Values.istioInjection }}"
+        version: v1
+    spec:
+      nodeSelector:
+        feature.node.kubernetes.io/cpu-cpuid.AVX512VNNI: 'true'
+        feature.node.kubernetes.io/cpu-cpuid.AVX2: 'true'
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: {{ .Chart.Name }}
+        image: "{{ .Values.image.repository }}:{{ .Values.image.Version }}"
+        args: ["--minio.endpoint=https://{{ .Values.minio.endpoint }}:{{ .Values.minio.port }}","--minio.rootUser=${SECRET_USRNAME}","--minio.rootPassword=${SECRET_PASSWORD}",
+                "--searchImage.addr=http://{{ .Values.searchImage.addr }}:{{ .Values.searchImage.port }}",
+                "--storageRest.addr=http://{{ .Values.storageRest.addr }}:{{ .Values.storageRest.port }}"
+              ] 
+        env:
+          - name: SECRET_USRNAME
+            valueFrom:
+              secretKeyRef:
+                name: query-rest-minio-secret
+                key: rootUser
+                optional: false
+          - name: SECRET_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: query-rest-minio-secret
+                key: rootPassword
+                optional: false
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        ports:
+        - containerPort: {{ .Values.image.port }}
+        resources:
+          limits:
+            cpu: "4"
+            memory: 400Mi
+          requests:
+            cpu: "10m"
+            memory: 200Mi
+        securityContext:
+          allowPrivilegeEscalation: false
