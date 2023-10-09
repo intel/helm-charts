@@ -1,0 +1,120 @@
+# INTEL CONFIDENTIAL
+#
+# Copyright (C) 2022 Intel Corporation.
+#
+# This software and the related documents are Intel copyrighted materials, and your use of
+# them is governed by the express license under which they were provided to you (License).
+# Unless the License provides otherwise, you may not use, modify, copy, publish, distribute,
+# disclose or transmit this software or the related documents without Intel's prior written permission.
+#
+# This software and the related documents are provided as is, with no express or implied warranties,
+# other than those that are expressly stated in the License.
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: oauth2-proxy
+  namespace: {{ .Values.namespace.value }}
+stringData: {{- toYaml .Values.oauth2.proxyEnv | nindent 2 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.oauth2.serviceName }}
+  namespace: {{ .Values.namespace.value }}
+spec:
+  selector:
+    app: oauth2-proxy
+  ports:
+  - name: http
+    port: {{ .Values.oauth2.servicePort }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: evi-oauth2-proxy
+  namespace: {{ .Values.namespace.value }}
+  annotations:
+    container.apparmor.security.beta.kubernetes.io/oauth2-proxy: runtime/default
+spec:
+  selector:
+    matchLabels:
+      app: oauth2-proxy
+  template:
+    metadata:
+      labels:
+        app: oauth2-proxy
+    spec:
+      nodeSelector:
+        feature.node.kubernetes.io/cpu-cpuid.AVX512VNNI: 'true'
+        feature.node.kubernetes.io/cpu-cpuid.AVX2: 'true'
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: oauth2-proxy
+        image: bitnami/oauth2-proxy:7.4.0
+        args:
+        - --provider=oidc
+        - --provider-display-name="Keycloak"
+        - --pass-access-token=true
+        - --pass-authorization-header=true
+        - --set-authorization-header=true
+        - --email-domain="intel.com" # update to your email domain
+        - --http-address=0.0.0.0:4180
+        - --upstream=static://200
+        - --skip-provider-button=true
+        - --silence-ping-logging=true
+        - --whitelist-domain="intel.com" # update to your website domain
+        - --oidc-issuer-url=http://{{ .Values.keycloakHost }}:{{ .Values.keycloakPort }}/realms/evi
+        - --login-url=http://{{ .Values.keycloakHost }}:{{ .Values.keycloakPort }}/realms/evi/protocol/openid-connect/auth
+        - --redeem-url=http://{{ .Values.keycloakHost }}:{{ .Values.keycloakPort }}/realms/evi/protocol/openid-connect/token
+        - --validate-url=http://{{ .Values.keycloakHost }}:{{ .Values.keycloakPort }}/realms/evi/protocol/openid-connect/userinfo
+        - --cookie-expire=4h0m0s
+        - --standard-logging=true
+        - --auth-logging=true
+        - --request-logging=true
+        - --session-store-type=redis
+        - --redis-connection-url={{ .Values.oauth2.redisSvc }}  # update to your redis connection string
+        env:
+        - name: OAUTH2_PROXY_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name: oauth2-proxy
+              key: OAUTH2_PROXY_CLIENT_ID
+        - name: OAUTH2_PROXY_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: oauth2-proxy
+              key: OAUTH2_PROXY_CLIENT_SECRET
+        - name: OAUTH2_PROXY_COOKIE_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: oauth2-proxy
+              key: OAUTH2_PROXY_COOKIE_SECRET
+        resources:
+          limits:
+            cpu: "1"
+            memory: "128Mi"
+          requests:
+            cpu: 10m
+            memory: 50Mi
+        ports:
+        - containerPort: 4180
+          protocol: TCP
+        readinessProbe:
+          initialDelaySeconds: 3
+          periodSeconds: 3
+          httpGet:
+            path: /ping
+            port: 4180
+        livenessProbe:
+          httpGet:
+            path: /ping
+            port: 4180
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        securityContext:
+          # readOnlyRootFilesystem: true
+          allowPrivilegeEscalation: false

@@ -1,0 +1,137 @@
+# INTEL CONFIDENTIAL
+#
+# Copyright (C) 2022 Intel Corporation.
+#
+# This software and the related documents are Intel copyrighted materials, and your use of
+# them is governed by the express license under which they were provided to you (License).
+# Unless the License provides otherwise, you may not use, modify, copy, publish, distribute,
+# disclose or transmit this software or the related documents without Intel's prior written permission.
+#
+# This software and the related documents are provided as is, with no express or implied warranties,
+# other than those that are expressly stated in the License.
+
+---
+# Default values for my-keycloak.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# keycloakHost Host name of Keycloak service
+keycloakHost: "localhost"
+# keycloakPort Port of Keycloak service
+keycloakPort: 31001
+
+namespace:
+  create: false
+  value: keycloak
+  istioInjection:
+    create: true
+
+# scCreate Whether to create storage class
+scCreate: true
+
+# values for persistance
+# persistance settings valid only if keycloak.postgresql.enabled is true
+persistance:
+  name: evi-keycloak-postgresql-0
+  capacity: 10Gi
+  storageClass: evi-local-storage-keycloak-psql
+  basePath: ""
+  hostname: ""
+
+secret:
+  auth:
+    # secret.auth.adminPassword Keycloak admin password value for secret
+    adminPassword: ""
+    # secret.auth.dbPassword Keycloak database password value for secret
+    dbPassword: ""
+
+gatewayTls:
+  credentialName: hce-tls
+  mode: SIMPLE
+
+# ----------------------------------------- settings for oauth2-proxy
+oauth2:
+  # oauth2.emailDomain Container args email-domain of oauth2-proxy
+  emailDomain: "intel.com"
+  # oauth2.whitelistDomain Container args whitelist-domain of oauth2-proxy
+  whitelistDomain: "intel.com"
+  # oauth2.redisSvc Container args redis-connection-url of oauth2-proxy
+  redisSvc: redis://evi-redis-standalone-master.dev.svc.cluster.local:6379
+  # oauth2.serviceName Service name of oauth2-proxy
+  serviceName: evi-oauth2-proxy
+  # oauth2.servicePort Service port of oauth2-proxy (ClusterIP)
+  servicePort: 4180
+  # oauth2.proxyEnv Env values to config oauth2-proxy
+  proxyEnv:
+    # The client id of the oauth client created in Keycloak
+    OAUTH2_PROXY_CLIENT_ID: "istio"
+    # The secret of the client id configured in Keycloak
+    OAUTH2_PROXY_CLIENT_SECRET: "prcN5XZSU7b4NRKsF2IKRt87qKioROYX"
+    # Key for encrypting the contents of the cookie
+    OAUTH2_PROXY_COOKIE_SECRET: "S0hPakd3YWNuWm83dC9PUGhqeDM4QT09"
+
+# ----------------------------------------- settings for keycloak
+keycloak:
+  enabled: true
+
+  ## Keycloak authentication parameters
+  ## ref: https://github.com/bitnami/containers/tree/main/bitnami/keycloak#admin-credentials
+  ##
+  auth:
+    ## @param auth.adminUser Keycloak administrator user
+    ##
+    adminUser: "admin"
+    ## @param auth.adminPassword Keycloak administrator password for the new user
+    ##
+    adminPassword: ""
+    ## @param auth.existingSecret An already existing secret containing auth info
+    ## e.g:
+    ## existingSecret:
+    ##   name: mySecret
+    ##   keyMapping:
+    ##     admin-password: myPasswordKey
+    ##     tls-keystore-password: myTlsKeystorePasswordKey
+    ##     tls-truststore-password: myTlsTruststorePasswordKey
+    ##
+    existingSecret: "keycloaksecret"
+
+  postgresql:
+    enabled: false
+    primary:
+      persistence:
+        storageClass: "evi-local-storage-keycloak-psql"
+        size: "8Gi"
+
+  ## External PostgreSQL configuration
+  ## All of these values are only used when postgresql.enabled is set to false
+  ## @param externalDatabase.host Database host
+  ## @param externalDatabase.port Database port number
+  ## @param externalDatabase.user Non-root username for Keycloak
+  ## @param externalDatabase.password Password for the non-root username for Keycloak
+  ## @param externalDatabase.database Keycloak database name
+  ## @param externalDatabase.existingSecret Name of an existing secret resource containing the database credentials
+  ## @param externalDatabase.existingSecretPasswordKey Name of an existing secret key containing the database credentials
+  externalDatabase:
+    host: "greenplum.greenplum"
+    port: "5432"
+    user: "keycloak"
+    database: "keycloak"
+    password: ""
+    existingSecret: "keycloaksecret"
+    existingSecretPasswordKey: "db-password"
+
+  service:
+    ports:
+      http: 80
+      https: 443
+    nodePorts:
+      http: 31001
+      https: 31003
+
+  keycloakConfigCli:
+    enabled: true
+    existingConfigmap: evi-realm
+    command:
+    - java
+    - -jar
+    - /opt/bitnami/keycloak-config-cli/keycloak-config-cli.jar
