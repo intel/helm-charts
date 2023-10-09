@@ -148,6 +148,28 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/evi-consul-0.8.3/evi-consul-0.8.3.tgz
     version: 0.8.3
+  evi-fm-master:
+  - apiVersion: v2
+    appVersion: 1.16.0
+    created: "2023-10-09T08:24:15.180817973Z"
+    description: A Helm chart for Kubernetes
+    digest: 0eee912020e85fe30a03ff0a336b36b292e46916d38ce9618ea0a05c5223c334
+    name: evi-fm-master
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/evi-fm-master-0.8.4/evi-fm-master-0.8.4.tgz
+    version: 0.8.4
+  evi-fm-worker:
+  - apiVersion: v2
+    appVersion: 1.16.0
+    created: "2023-10-09T08:24:15.393785001Z"
+    description: A Helm chart for Kubernetes
+    digest: 7c3be7976e7167fbfad64e69e09f72808e207ac5c057076a2bccac3e4050438d
+    name: evi-fm-worker
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/evi-fm-worker-0.8.5/evi-fm-worker-0.8.5.tgz
+    version: 0.8.5
   evi-minio:
   - apiVersion: v2
     appVersion: 5.0.1
@@ -1311,4 +1333,4 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/vault-0.8.0/vault-0.8.0.tgz
     version: 0.8.0
-generated: "2023-10-09T08:23:56.436006041Z"
+generated: "2023-10-09T08:24:15.394670741Z"
