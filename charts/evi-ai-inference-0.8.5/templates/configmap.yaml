@@ -1,0 +1,41 @@
+# INTEL CONFIDENTIAL
+#
+# Copyright (C) 2022 Intel Corporation.
+#
+# This software and the related documents are Intel copyrighted materials, and your use of
+# them is governed by the express license under which they were provided to you (License).
+# Unless the License provides otherwise, you may not use, modify, copy, publish, distribute,
+# disclose or transmit this software or the related documents without Intel's prior written permission.
+#
+# This software and the related documents are provided as is, with no express or implied warranties,
+# other than those that are expressly stated in the License.
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: {{ .Values.global.namespace.value }}
+  name: {{ .Values.configMap.AIInference.name }}
+data:
+{{ $v :=  .Values.configMap.AIInference.value }}
+{{ (.Files.Glob $v).AsConfig | replace "servicePort" (toString .Values.image.containerPort) | replace "maxConcurrentWorkloadPerReplica" (toString .Values.configMap.AIInference.maxConcurrentWorkloadPerReplica) | indent 2  }}
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: {{ .Values.global.namespace.value }}
+  name: {{ .Values.configMap.hbaseStorage.name }}
+data:
+{{ $v :=  .Values.configMap.hbaseStorage.value }}
+{{ (.Files.Glob $v).AsConfig | replace "hbaseAddr_placeholder" .Values.configMap.hbaseStorage.hbaseAddr | replace "hbasePort_placeholder" (toString .Values.configMap.hbaseStorage.hbasePort)  | replace "storageRestAddr_placeholder" (nospace (cat (toString .Values.configMap.hbaseStorage.storage_server_address) ":" (toString .Values.configMap.hbaseStorage.storage_server_port))) | indent 2  }}
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: {{ .Values.global.namespace.value }}
+  name: {{ .Values.configMap.mediaStorage.name }}
+data:
+{{ $v :=  .Values.configMap.mediaStorage.value }}
+{{ (.Files.Glob $v).AsConfig | replace "minIOPort_placeholder" .Values.configMap.mediaStorage.minIOPort | replace "minIOAddress_placeholder" .Values.configMap.mediaStorage.minIOAddress | replace "storage_server_port_placeholder" .Values.configMap.hbaseStorage.storage_server_port | replace "storage_server_address_placeholder" .Values.configMap.hbaseStorage.storage_server_address | replace "rootUserPath_placeholder" .Values.configMap.mediaStorage.rootUserMountPath | replace "rootPasswordPath_placeholder" .Values.configMap.mediaStorage.rootPasswordMountPath | indent 2  }}
