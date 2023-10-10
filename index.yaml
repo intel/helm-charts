@@ -338,6 +338,23 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/evi-test-tool-0.8.0/evi-test-tool-0.8.0.tgz
     version: 0.8.0
+  evi-vault:
+  - apiVersion: v2
+    appVersion: 1.12.1
+    created: "2023-10-10T06:04:21.839090444Z"
+    dependencies:
+    - name: vault
+      repository: https://helm.releases.hashicorp.com
+      tags:
+      - vault
+      version: 0.23.0
+    description: A Helm chart for Kubernetes
+    digest: 53b39b2685e431874433363e497fd42ac5cd0c83fc7f38930224113a7ccd543e
+    name: evi-vault
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/evi-vault-0.8.2/evi-vault-0.8.2.tgz
+    version: 0.8.2
   fm-master:
   - apiVersion: v2
     appVersion: 1.16.0
@@ -1482,4 +1499,4 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/vault-0.8.0/vault-0.8.0.tgz
     version: 0.8.0
-generated: "2023-10-09T08:38:11.697521868Z"
+generated: "2023-10-10T06:04:21.839361556Z"
