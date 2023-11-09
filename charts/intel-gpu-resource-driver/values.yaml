@@ -1,0 +1,85 @@
+# Default values for intel-gpu-resource-driver.
+nameOverride: ""
+namespaceOverride: ""
+fullnameOverride: ""
+selectorLabelsOverride: {}
+
+crds:
+  enabled: true
+
+imagePullSecrets: []
+image:
+  repository: intel
+  name: intel-gpu-resource-driver
+  pullPolicy: Always
+  tag: "v0.2.0"
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+  automount: true
+
+rbac:
+    create: true
+    createAggregateClusterRoles: false
+    pspEnabled: false
+    pspUseAppArmor: false
+    #useExistingRole: ""
+    #useExistingClusterRole: intel-gpu-resource-driver-role
+
+# Define Controller Part
+controller:
+  podAnnotations: {}
+  tolerations:
+  - key: node-role.kubernetes.io/master
+    operator: Exists
+    effect: NoSchedule
+  - key: node-role.kubernetes.io/control-plane
+    operator: Exists
+    effect: NoSchedule
+  nodeSelector: {}
+      #node-role.kubernetes.io/control-plane: ""
+  affinity: {}
+  containers:
+    podAnnotations: {}
+    controller:
+      securityContext:
+        privileged: false
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop: [ "ALL" ]
+        readOnlyRootFilesystem: true
+        runAsNonRoot: true
+        runAsUser: 10001
+        seccompProfile:
+          type: RuntimeDefault
+
+# Define Kubelet-Plugin Part
+kubeletPlugin:
+  podAnnotations: {}
+  containers:
+    init:
+      securityContext:
+        privileged: false
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop: [ "ALL" ]
+        readOnlyRootFilesystem: true
+        runAsNonRoot: true
+        runAsUser: 10001
+        seccompProfile:
+          type: RuntimeDefault
+    plugin:
+      securityContext:
+        privileged: false
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop: [ "ALL" ]
+        readOnlyRootFilesystem: true
+        runAsUser: 0
+        seccompProfile:
+          type: RuntimeDefault
+  tolerations: []
+  nodeSelector: {}
+  affinity: {}

@@ -1,0 +1,235 @@
+---
+apiVersion: gpu.resource.intel.com/v1alpha2
+kind: GpuClassParameters
+metadata:
+  name: intel-gpu-params-shared
+  labels:
+    {{- include "intel-gpu-resource-driver.labels" . | nindent 4 }}
+spec:
+  shared: true
+---
+apiVersion: resource.k8s.io/v1alpha2
+kind: ResourceClass
+metadata:
+  name: intel-gpu-shared
+driverName: gpu.resource.intel.com
+parametersRef:
+  apiGroup: gpu.resource.intel.com/v1alpha2
+  kind: GpuClassParameters
+  name: intel-gpu-params-shared
+
+---
+apiVersion: gpu.resource.intel.com/v1alpha2
+kind: GpuClassParameters
+metadata:
+  name: intel-gpu-params
+spec:
+  shared: false
+---
+apiVersion: resource.k8s.io/v1alpha2
+kind: ResourceClass
+metadata:
+  name: intel-gpu
+driverName: gpu.resource.intel.com
+parametersRef:
+  apiGroup: gpu.resource.intel.com/v1alpha2
+  kind: GpuClassParameters
+  name: intel-gpu-params
+
+---
+apiVersion: gpu.resource.intel.com/v1alpha2
+kind: GpuClassParameters
+metadata:
+  name: intel-gpu-monitor-params
+spec:
+  monitor: true
+  shared: false
+---
+apiVersion: resource.k8s.io/v1alpha2
+kind: ResourceClass
+metadata:
+  name: intel-gpu-monitor
+driverName: gpu.resource.intel.com
+parametersRef:
+  apiGroup: gpu.resource.intel.com/v1alpha2
+  kind: GpuClassParameters
+  name: intel-gpu-monitor-params
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: defaults
+  namespace: {{ include "intel-gpu-resource-driver.namespace" . }}
+data:
+# It is possible to override driver hardcoded defaults:
+# - resourceClaimParameters:
+#     if resource claim did not include any parameters, these will be used
+# - vf-memory
+#     per product amount of local memory, in MiB, the auto-added VFs will get
+  resourceClaimParameters.config: |
+    count=1
+    type=gpu
+    shareable=true
+  vf-memory.config: |
+    {
+      "max1550": 16385,
+      "max1450": 16384,
+      "max1100": 8192,
+      "flex140": 2048,
+      "flex170": 4096,
+    }
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: {{ include "intel-gpu-resource-driver.name" .}}-kubelet-plugin
+  namespace: {{ include "intel-gpu-resource-driver.namespace" . }}
+  labels:
+    {{- include "intel-gpu-resource-driver.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "intel-gpu-resource-driver.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.kubeletPlugin.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+       {{- include "intel-gpu-resource-driver.templateLabels" . | nindent 8 }}
+    spec:
+      serviceAccount: intel-gpu-resource-driver-service-account
+      serviceAccountName: {{ include "intel-gpu-resource-driver.serviceAccountName" . }}
+      initContainers:
+      - name: init
+        image: {{ include "intel-gpu-resource-driver.fullimage" . }}
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        command: ["/gas-status-updater", "--status", "NotReady"]
+        env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        securityContext:
+          {{- toYaml .Values.kubeletPlugin.containers.init.securityContext | nindent 10 }}
+      containers:
+      - name: kubelet-plugin
+        image: {{ include "intel-gpu-resource-driver.fullimage" . }}
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        command: ["/kubelet-plugin", "-v", "5"]
+        env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: SYSFS_ROOT
+          value: "/sysfs"
+        # Use this to tell kubelet-plugin where the DRI devices nodes should be.
+        # This will be prefix for CDI devices, runtime will try to mount devices
+        # with this prefix into workloads.
+        #- name: DEV_DRI_PATH
+        #  value: "/fake/dri"
+        volumeMounts:
+        - name: plugins-registry
+          mountPath: /var/lib/kubelet/plugins_registry
+        - name: plugins
+          mountPath: /var/lib/kubelet/plugins
+        - name: cdi
+          mountPath: /etc/cdi
+        - name: varruncdi
+          mountPath: /var/run/cdi
+        - name: defaults
+          mountPath: "/defaults"
+          readOnly: true
+        - name: sysfs
+          mountPath: "/sysfs"
+        securityContext:
+           {{- toYaml .Values.kubeletPlugin.containers.plugin.securityContext | nindent 10 }}
+      volumes:
+      - name: plugins-registry
+        hostPath:
+          path: /var/lib/kubelet/plugins_registry
+      - name: plugins
+        hostPath:
+          path: /var/lib/kubelet/plugins
+      - name: cdi
+        hostPath:
+          path: /etc/cdi
+      - name: varruncdi
+        hostPath:
+          path: /var/run/cdi
+      - name: sysfs
+        hostPath:
+          path: /sys
+      - name: defaults
+        configMap:
+          name: defaults
+      {{- with .Values.kubeletPlugin.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.kubeletPlugin.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.kubeletPlugin.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "intel-gpu-resource-driver.name" . }}-controller
+  namespace: {{ include "intel-gpu-resource-driver.namespace" . }}
+  labels:
+     {{- include "intel-gpu-resource-driver.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "intel-gpu-resource-driver.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.controller.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "intel-gpu-resource-driver.templateLabels" . | nindent 8 }}
+    spec:
+      serviceAccount: intel-gpu-resource-driver-service-account
+      serviceAccountName: {{ include "intel-gpu-resource-driver.serviceAccountName" . }}
+      containers:
+      - name: controller
+        image:  {{ include "intel-gpu-resource-driver.fullimage" . }}
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        command: ["/controller", "-v", "6"]
+        env:
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        securityContext:
+          {{- toYaml .Values.controller.containers.controller.securityContext | nindent 10 }}
+      {{- with .Values.controller.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.controller.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.controller.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
