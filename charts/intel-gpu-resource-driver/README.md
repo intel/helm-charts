@@ -20,7 +20,7 @@ helm upgrade intel-gpu-resource-driver intel/intel-gpu-resource-driver [flags]
 
 ## Uninstall Chart
 ```
-helm uninstall intel-gpu-resource-driver
+helm uninstall intel-gpu-resource-driver --namespace intel-gpu-resource-driver
 ```
 
 ## Configuration

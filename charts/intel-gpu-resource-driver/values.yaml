@@ -11,7 +11,7 @@ imagePullSecrets: []
 image:
   repository: intel
   name: intel-gpu-resource-driver
-  pullPolicy: Always
+  pullPolicy: IfNotPresent
   tag: "v0.2.0"
 
 serviceAccount:
