@@ -1,0 +1,15 @@
+{{- if .Values.rbac.create }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "intel-gpu-resource-driver.fullname" . }}-rolebinding
+  namespace: {{ include "intel-gpu-resource-driver.namespace" . }}
+subjects:
+- kind: ServiceAccount
+  name: {{ include "intel-gpu-resource-driver.serviceAccountName" . }}
+  namespace: {{ include "intel-gpu-resource-driver.namespace" . }}
+roleRef:
+  kind: ClusterRole
+  name: {{ include "intel-gpu-resource-driver.fullname" . }}-role
+  apiGroup: rbac.authorization.k8s.io
+{{- end }}
