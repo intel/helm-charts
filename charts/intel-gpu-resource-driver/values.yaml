@@ -4,8 +4,6 @@ namespaceOverride: ""
 fullnameOverride: ""
 selectorLabelsOverride: {}
 
-crds:
-  enabled: true
 
 imagePullSecrets: []
 image:

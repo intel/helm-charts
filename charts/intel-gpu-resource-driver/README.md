@@ -9,6 +9,8 @@ helm repo update
 You can execute `helm search repo intel` command to see pulled charts [optional].
 
 ## Install Helm Chart
+CRDs of the GPU driver are installed as part of the chart first.
+
 ```
 helm install intel-gpu-resource-driver intel/intel-gpu-resource-driver \
 --create-namespace --namespace intel-gpu-resource-driver
