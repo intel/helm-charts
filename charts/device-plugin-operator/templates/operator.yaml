@@ -676,7 +676,6 @@ webhooks:
     - v1
     operations:
     - CREATE
-    - UPDATE
     resources:
     - pods
   sideEffects: None
@@ -686,7 +685,7 @@ webhooks:
     service:
       name: inteldeviceplugins-webhook-service
       namespace: {{ .Release.Namespace | quote }}
-      path: /pods-sgx
+      path: /mutate--v1-pod
   failurePolicy: Ignore
   name: sgx.mutator.webhooks.intel.com
   reinvocationPolicy: IfNeeded
@@ -697,7 +696,6 @@ webhooks:
     - v1
     operations:
     - CREATE
-    - UPDATE
     resources:
     - pods
   sideEffects: None
