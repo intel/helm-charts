@@ -18,3 +18,11 @@ privateRegistry:
   registryUrl: ""
   registryUser: ""
   registrySecret: ""
+
+resources:
+  limits:
+    cpu: 100m
+    memory: 120Mi
+  requests:
+    cpu: 100m
+    memory: 100Mi
