@@ -1,4 +1,4 @@
-# Dynamic Resource Allocation (DRA) GPU Driver Helm Chart
+# Dynamic Resource Allocation (DRA) Intel GPU Driver Helm Chart
 
 ## Get Helm Repository Info
 ```
@@ -37,4 +37,9 @@ You may also run `helm show values` on this chart's dependencies for additional 
 |parameter| value |
 |---------|-----------|
 | `image.repository` | `intel` |
-| `image.tag` | `v0.2.0` |
+| `image.tag` | `v0.3.0` |
+
+If you change the image tag to be used in Helm chart deployment, ensure that the version of the container image is consistent with CRDs and deployment YAMLs - they might change between releases.
+
+> [!Note]
+> Helm does not support _upgrading_ (or deleting) CRDs to prevent data loss. Only installing CRDs is supported. Details: https://github.com/helm/community/blob/main/hips/hip-0011.md
