@@ -10,7 +10,7 @@ image:
   repository: intel
   name: intel-gpu-resource-driver
   pullPolicy: IfNotPresent
-  tag: "v0.2.0"
+  tag: "v0.3.0"
 
 serviceAccount:
   create: true
