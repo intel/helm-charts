@@ -43,6 +43,9 @@ fmMasterArchived:
 fmMasterOccurence:
   addr: fm-master-fs.fm
   port: 8080
+fmMasterApproximate:
+  addr: fm-master-as.fm
+  port: 8080
 
 imagePullSecrets: []
 nameOverride: ""
