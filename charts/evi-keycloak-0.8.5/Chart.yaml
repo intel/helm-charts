@@ -1,0 +1,13 @@
+apiVersion: v2
+appVersion: 21.0.2
+dependencies:
+- condition: keycloak.enabled
+  name: keycloak
+  repository: https://charts.bitnami.com/bitnami
+  tags:
+  - keycloak
+  version: 14.2.0
+description: A Helm chart for Kubernetes
+name: evi-keycloak
+type: application
+version: 0.8.5

@@ -1,0 +1,112 @@
+# INTEL CONFIDENTIAL
+#
+# Copyright (C) 2022 Intel Corporation.
+#
+# This software and the related documents are Intel copyrighted materials, and your use of
+# them is governed by the express license under which they were provided to you (License).
+# Unless the License provides otherwise, you may not use, modify, copy, publish, distribute,
+# disclose or transmit this software or the related documents without Intel's prior written permission.
+#
+# This software and the related documents are provided as is, with no express or implied warranties,
+# other than those that are expressly stated in the License.
+
+---
+apiVersion: security.istio.io/v1beta1
+kind: RequestAuthentication
+metadata:
+  name: istio-ingressgateway
+  namespace: istio-system
+spec:
+  selector:
+    matchLabels:
+      app: istio-ingressgateway
+  jwtRules:
+  - issuer: "http://{{ .Values.keycloakHost }}:{{ .Values.keycloakPort }}/realms/evi"
+    jwksUri: "http://{{ .Values.keycloakHost }}:{{ .Values.keycloakPort }}/realms/evi/protocol/openid-connect/certs"
+---
+# apiVersion: security.istio.io/v1beta1
+# kind: AuthorizationPolicy
+# metadata:
+#   name: istio-ingressgateway
+#   namespace: istio-system
+# spec:
+#   selector:
+#     matchLabels:
+#       app: istio-ingressgateway
+#   rules:
+#   - from:
+#     - source:
+#         requestPrincipals: ["http://{{ .Values.keycloakHost }}:{{ .Values.keycloakPort }}/realms/evi/*"]
+#     when:
+#       - key: request.auth.audiences
+#         values:
+#         - istio
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: EnvoyFilter
+metadata:
+  name: istio-ingressgateway
+  namespace: istio-system
+spec:
+  workloadSelector:
+    labels:
+      app: istio-ingressgateway
+  configPatches:
+  - applyTo: HTTP_FILTER
+    match:
+      context: GATEWAY
+      listener:
+        filterChain:
+          filter:
+            name: envoy.filters.network.http_connection_manager
+            subFilter:
+              name: istio.metadata_exchange
+              #name: envoy.router
+    patch:
+      operation: INSERT_BEFORE
+      value:
+        name: envoy.filters.http.ext_authz
+        typed_config:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz
+          failure_mode_allow: false
+          http_service:
+            authorizationRequest:
+              allowedHeaders:
+                patterns:
+                - exact: accept
+                - exact: authorization
+                - exact: cookie
+                - exact: from
+                - exact: proxy-authorization
+                - exact: user-agent
+                - exact: x-forwarded-access-token
+                - exact: x-forwarded-email
+                - exact: x-forwarded-for
+                - exact: x-forwarded-host
+                - exact: x-forwarded-proto
+                - exact: x-forwarded-user
+                - prefix: x-auth-request
+                - prefix: x-forwarded
+            authorizationResponse:
+              allowedClientHeaders:
+                patterns:
+                - exact: authorization
+                - exact: location
+                - exact: proxy-authenticate
+                - exact: set-cookie
+                - exact: www-authenticate
+                - prefix: x-auth-request
+                - prefix: x-forwarded
+              allowedUpstreamHeaders:
+                patterns:
+                - exact: authorization
+                - exact: location
+                - exact: proxy-authenticate
+                - exact: set-cookie
+                - exact: www-authenticate
+                - prefix: x-auth-request
+                - prefix: x-forwarded
+            server_uri:
+              cluster: outbound|{{ .Values.oauth2.servicePort }}||{{ .Values.oauth2.serviceName }}.{{ .Values.namespace.value }}.svc.cluster.local
+              timeout: 5s
+              uri: http://{{ .Values.oauth2.serviceName }}.{{ .Values.namespace.value }}.svc.cluster.local
