@@ -159,6 +159,28 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/evi-fm-master-0.8.4/evi-fm-master-0.8.4.tgz
     version: 0.8.4
+  evi-fm-master-as:
+  - apiVersion: v2
+    appVersion: 1.16.0
+    created: "2024-03-01T10:55:06.871556467Z"
+    description: A Helm chart for Kubernetes
+    digest: c3722321fcc6b9603485fd656a9d759051f5a8f3ead01e87518754be91543a51
+    name: evi-fm-master-as
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/evi-fm-master-as-0.8.4/evi-fm-master-as-0.8.4.tgz
+    version: 0.8.4
+  evi-fm-master-bf:
+  - apiVersion: v2
+    appVersion: 1.16.0
+    created: "2024-03-01T10:55:07.000843465Z"
+    description: A Helm chart for Kubernetes
+    digest: 8daf01a81fed78ec987d6c1f2dacd3ebcf52ee1feab5a4d1ba2048b0c9a66206
+    name: evi-fm-master-bf
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/evi-fm-master-bf-0.8.4/evi-fm-master-bf-0.8.4.tgz
+    version: 0.8.4
   evi-fm-worker:
   - apiVersion: v2
     appVersion: 1.16.0
@@ -169,6 +191,28 @@ entries:
     type: application
     urls:
     - https://github.com/intel/helm-charts/releases/download/evi-fm-worker-0.8.5/evi-fm-worker-0.8.5.tgz
+    version: 0.8.5
+  evi-fm-worker-as:
+  - apiVersion: v2
+    appVersion: 1.16.0
+    created: "2024-03-01T10:55:07.097341168Z"
+    description: A Helm chart for Kubernetes
+    digest: ab42c0e89708f1e4a1ada47f07bf8e43ac55303e622301cd8b04817edad895e5
+    name: evi-fm-worker-as
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/evi-fm-worker-as-0.8.5/evi-fm-worker-as-0.8.5.tgz
+    version: 0.8.5
+  evi-fm-worker-bf:
+  - apiVersion: v2
+    appVersion: 1.16.0
+    created: "2024-03-01T10:55:07.221819498Z"
+    description: A Helm chart for Kubernetes
+    digest: d1031675c1a285f1b76edeeccfedbc77c5e9e543f1124f10438b789d079c02e3
+    name: evi-fm-worker-bf
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/evi-fm-worker-bf-0.8.5/evi-fm-worker-bf-0.8.5.tgz
     version: 0.8.5
   evi-hbase:
   - apiVersion: v2
@@ -200,6 +244,23 @@ entries:
     - https://github.com/intel/helm-charts/releases/download/evi-kes-0.8.4/evi-kes-0.8.4.tgz
     version: 0.8.4
   evi-keycloak:
+  - apiVersion: v2
+    appVersion: 21.0.2
+    created: "2024-03-01T10:55:07.351105778Z"
+    dependencies:
+    - condition: keycloak.enabled
+      name: keycloak
+      repository: https://charts.bitnami.com/bitnami
+      tags:
+      - keycloak
+      version: 14.2.0
+    description: A Helm chart for Kubernetes
+    digest: 8a3baebc2c5227e28ca847feed72cc9bd348535cfae13d9ce7619612eb425915
+    name: evi-keycloak
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/evi-keycloak-0.8.5/evi-keycloak-0.8.5.tgz
+    version: 0.8.5
   - apiVersion: v2
     appVersion: 21.0.2
     created: "2023-10-09T08:28:06.061398039Z"
@@ -1602,4 +1663,4 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/vault-0.8.0/vault-0.8.0.tgz
     version: 0.8.0
-generated: "2024-03-01T06:50:43.531612166Z"
+generated: "2024-03-01T10:55:07.455935872Z"
