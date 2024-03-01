@@ -57,6 +57,7 @@ spec:
         args: ["--aiInference.addr=http://{{ .Values.aiInference.addr }}:{{ .Values.aiInference.port }}",
                "--fmMasterArchived.addr=http://{{ .Values.fmMasterArchived.addr }}:{{ .Values.fmMasterArchived.port }}/match",
                "--fmMasterOccurence.addr=http://{{ .Values.fmMasterOccurence.addr }}:{{ .Values.fmMasterOccurence.port }}/match",
+               "--fmMasterApproximate.addr=http://{{ .Values.fmMasterApproximate.addr }}:{{ .Values.fmMasterApproximate.port }}/match"
               ] 
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         ports:
