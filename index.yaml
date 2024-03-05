@@ -292,6 +292,16 @@ entries:
   evi-fm-worker-bf:
   - apiVersion: v2
     appVersion: 1.16.0
+    created: "2024-03-05T01:57:31.512568679Z"
+    description: A Helm chart for Kubernetes
+    digest: 0a41ccda318b7c4b8201bba44db3b04e4524d32bc1b66688247aad6d9ae397c1
+    name: evi-fm-worker-bf
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/evi-fm-worker-bf-2.1.0/evi-fm-worker-bf-2.1.0.tgz
+    version: 2.1.0
+  - apiVersion: v2
+    appVersion: 1.16.0
     created: "2024-03-01T10:55:07.221819498Z"
     description: A Helm chart for Kubernetes
     digest: d1031675c1a285f1b76edeeccfedbc77c5e9e543f1124f10438b789d079c02e3
@@ -1749,4 +1759,4 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/vault-0.8.0/vault-0.8.0.tgz
     version: 0.8.0
-generated: "2024-03-05T01:57:20.287190717Z"
+generated: "2024-03-05T01:57:31.513128993Z"
