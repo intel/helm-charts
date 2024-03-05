@@ -482,6 +482,21 @@ entries:
   evi-postgresql:
   - apiVersion: v2
     appVersion: 15.2.0
+    created: "2024-03-05T02:01:18.633907735Z"
+    dependencies:
+    - name: postgresql
+      repository: https://charts.bitnami.com/bitnami
+      tags:
+      - postgresql
+      version: 12.2.7
+    description: A Helm chart for Kubernetes
+    digest: 5e2cee3cbb76b8703d899ed62f00af3ab7c93b2f2bcf77bd712c7823934eb0f8
+    name: evi-postgresql
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/evi-postgresql-2.1.0/evi-postgresql-2.1.0.tgz
+    version: 2.1.0
+  - apiVersion: v2
+    appVersion: 15.2.0
     created: "2023-10-09T08:28:55.123583109Z"
     dependencies:
     - name: postgresql
@@ -1818,4 +1833,4 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/vault-0.8.0/vault-0.8.0.tgz
     version: 0.8.0
-generated: "2024-03-05T02:00:59.952308695Z"
+generated: "2024-03-05T02:01:18.634146721Z"
