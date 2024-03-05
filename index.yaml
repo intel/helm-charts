@@ -602,6 +602,22 @@ entries:
   evi-vault:
   - apiVersion: v2
     appVersion: 1.12.1
+    created: "2024-03-05T02:01:47.289938576Z"
+    dependencies:
+    - name: vault
+      repository: https://helm.releases.hashicorp.com
+      tags:
+      - vault
+      version: 0.23.0
+    description: A Helm chart for Kubernetes
+    digest: e08e5c38638293f06e2848811e10b1643c45f72043def29a86c062cd48150913
+    name: evi-vault
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/evi-vault-2.1.0/evi-vault-2.1.0.tgz
+    version: 2.1.0
+  - apiVersion: v2
+    appVersion: 1.12.1
     created: "2023-10-10T06:04:21.839090444Z"
     dependencies:
     - name: vault
@@ -1853,4 +1869,4 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/vault-0.8.0/vault-0.8.0.tgz
     version: 0.8.0
-generated: "2024-03-05T02:01:38.763005622Z"
+generated: "2024-03-05T02:01:47.290194283Z"
