@@ -1,0 +1,197 @@
+# INTEL CONFIDENTIAL
+#
+# Copyright (C) 2022 Intel Corporation.
+#
+# This software and the related documents are Intel copyrighted materials, and your use of
+# them is governed by the express license under which they were provided to you (License).
+# Unless the License provides otherwise, you may not use, modify, copy, publish, distribute,
+# disclose or transmit this software or the related documents without Intel's prior written permission.
+#
+# This software and the related documents are provided as is, with no express or implied warranties,
+# other than those that are expressly stated in the License.
+
+---
+# Default values for new-hbase.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+persistance:
+  # persistance.*size (Required) Capacity size of pvs
+  namenodeSize:
+  datanodeSize:
+  zookeeperSize:
+  # persistance.*.path (Required) Directory for pvs to use
+  # persistance.*.hostname (Required) Node hostname for pv affinity
+  namenode:
+    pv0:
+      path:
+      hostname:
+  datanode:
+    pv0:
+      path:
+      hostname:
+    pv1:
+      path:
+      hostname:
+  zookeeper:
+    path:
+    hostname:
+
+namespace:
+  create: false
+  value: dev
+  istioInjection:
+    create: false
+
+storageClass:
+  # storageClass.create Define whether to create storage class
+  create: true
+  name: evi-local-storage-hdfs
+
+# ----------------------------------------- settings for hbase chart
+hbase:
+  enabled: true
+
+  image:
+    repository: ghcr.io/fleeksoft/hbase/hbase-base
+    tag: 2.4.13.2
+    pullPolicy: IfNotPresent
+  
+  # The version of the hadoop libraries being used in the image.
+  hbaseVersion: 2.4.13
+
+  # Select antiAffinity as either hard or soft, default is 'soft'
+  # 'hard' is recommended for higher availaility
+  antiAffinity: "soft"
+
+  conf:
+  hadoopUserName: root
+  hbaseSite:
+    hbase.rootdir:  # default is "hdfs://{{.Release.Name}}-hdfs-namenode:9000/hbase"
+    hbase.zookeeper.quorum:  # default is "{{.Release.Name}}-zookeeper:2181"
+
+  hbase:
+    master:
+      replicas: 2
+      resources:
+        requests:
+          memory: "8192Mi"
+          cpu: "4"
+        limits:
+          memory: "10240Mi"
+          cpu: "16"
+    regionServer:
+      replicas: 2
+      resources:
+        requests:
+          memory: "8192Mi"
+          cpu: "4"
+        limits:
+          memory: "40960Mi" # This value can be dynamically adjusted according to the size of the data volume
+          cpu: "16"
+
+  prometheus:
+    enabled: false
+    port: 9709
+    # hbase-master pods runs two jvm processes: hbase and the thrift api.
+    thriftPort: 5557
+
+  # ----------------------------------------- settings for hadoop chart
+  hadoop:
+    enabled: true
+
+    image:
+      repository: ghcr.io/fleeksoft/hbase/hdfs
+      tag: 3.3.3.2
+      pullPolicy: IfNotPresent
+
+    # The version of the hadoop libraries being used in the image.
+    hadoopVersion: 3.3.3
+    logLevel: INFO
+    
+    # Select antiAffinity as either hard or soft, default is soft
+    antiAffinity: "soft"
+
+    persistence:
+      nameNode:
+        enabled: true
+        storageClass: evi-local-storage-hdfs
+        accessMode: ReadWriteOnce
+        size: 30Gi
+      dataNode:
+        enabled: true
+        storageClass: evi-local-storage-hdfs
+        accessMode: ReadWriteOnce
+        size: 50Gi
+
+    # ----------------------------------------- settings for hadoop.hdfs
+    hdfs:
+      nameNode:
+        pdbMinAvailable: 1
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "10m"
+          limits:
+            memory: "2048Mi"
+            cpu: "1000m"
+      dataNode:
+        replicas: 2
+        pdbMinAvailable: 2
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "10m"
+          limits:
+            memory: "2048Mi"
+            cpu: "1000m"
+      webhdfs:
+        enabled: true
+
+  # ----------------------------------------- settings for hadoop.yarn
+    yarn:
+      resourceManager:
+        pdbMinAvailable: 1
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "10m"
+          limits:
+            memory: "2048Mi"
+            cpu: "2000m"
+
+      nodeManager:
+        pdbMinAvailable: 1
+
+        # The number of YARN NodeManager instances.
+        replicas: 1
+
+        # Create statefulsets in parallel (K8S 1.7+)
+        parallelCreate: false
+
+        # CPU and memory resources allocated to each node manager pod.
+        # This should be tuned to fit your workload.
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "10m"
+          limits:
+            memory: "2048Mi"
+            cpu: "1000m"
+
+  # ----------------------------------------- settings for zookeeper chart
+  zookeeper:
+    enabled: true
+    replicaCount: 1
+    persistence:
+      enabled: true
+      existingClaim: ""
+      storageClass: evi-local-storage-hdfs
+      accessModes:
+        - ReadWriteOnce
+      size: 25Gi
+    resources:
+      limits: {}
+      requests:
+        memory: 256Mi
+        cpu: 250m
