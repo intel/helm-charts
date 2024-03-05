@@ -551,6 +551,16 @@ entries:
   evi-test-tool:
   - apiVersion: v2
     appVersion: 1.16.0
+    created: "2024-03-05T02:01:38.762691114Z"
+    description: A Helm chart for Kubernetes
+    digest: 1170f6563c9a9e9abe67280bdb8bf5780e094f2e26ad7e7e8b58f7c7947781ec
+    name: evi-test-tool
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/evi-test-tool-2.1.0/evi-test-tool-2.1.0.tgz
+    version: 2.1.0
+  - apiVersion: v2
+    appVersion: 1.16.0
     created: "2024-03-01T06:50:43.531423847Z"
     description: A Helm chart for Kubernetes
     digest: 637db87147899efd6e6b9f386d01943d4691a31ea8a649d83048939b11c920c0
@@ -1843,4 +1853,4 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/vault-0.8.0/vault-0.8.0.tgz
     version: 0.8.0
-generated: "2024-03-05T02:01:34.032082672Z"
+generated: "2024-03-05T02:01:38.763005622Z"
