@@ -348,6 +348,16 @@ entries:
   evi-kes:
   - apiVersion: v2
     appVersion: 2023-04-03T16-41-28Z
+    created: "2024-03-05T01:58:26.568916754Z"
+    description: A Helm chart for Kubernetes
+    digest: a2c419c2dfc123c98854b091a191085f1799ec18e69a25bf7059c5ca824590fa
+    name: evi-kes
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/evi-kes-2.1.0/evi-kes-2.1.0.tgz
+    version: 2.1.0
+  - apiVersion: v2
+    appVersion: 2023-04-03T16-41-28Z
     created: "2023-10-09T08:25:08.29443655Z"
     description: A Helm chart for Kubernetes
     digest: ad075c0e7d1ca77a3e660e3f4c12d5f5d028e61d124914f15bd5e638d4a433d6
@@ -1776,4 +1786,4 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/vault-0.8.0/vault-0.8.0.tgz
     version: 0.8.0
-generated: "2024-03-05T01:58:21.403600642Z"
+generated: "2024-03-05T01:58:26.56931817Z"
