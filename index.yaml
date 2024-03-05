@@ -1504,6 +1504,16 @@ entries:
   its-query-rest:
   - apiVersion: v2
     appVersion: 1.16.0
+    created: "2024-03-05T02:11:02.378218731Z"
+    description: A Helm chart for Kubernetes
+    digest: c73d362536cfe0ba12615c2d256e1db9bd9b4f4c012fc3afd4b3736a7e2b3998
+    name: its-query-rest
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/its-query-rest-2.1.0/its-query-rest-2.1.0.tgz
+    version: 2.1.0
+  - apiVersion: v2
+    appVersion: 1.16.0
     created: "2023-10-09T08:37:04.52260777Z"
     description: A Helm chart for Kubernetes
     digest: b2bf68580b8b78f295cd74f7e2c742611812c8a199e6198fcafc6fc6221499d2
@@ -1889,4 +1899,4 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/vault-0.8.0/vault-0.8.0.tgz
     version: 0.8.0
-generated: "2024-03-05T02:05:37.665584009Z"
+generated: "2024-03-05T02:11:02.378589103Z"
