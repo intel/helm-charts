@@ -218,6 +218,16 @@ entries:
   evi-fm-master-as:
   - apiVersion: v2
     appVersion: 1.16.0
+    created: "2024-03-05T01:57:01.322624422Z"
+    description: A Helm chart for Kubernetes
+    digest: 496fa8876863479a39f00614828fd48110d69bc46c6736af2e8f72bcea6b0959
+    name: evi-fm-master-as
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/evi-fm-master-as-2.1.0/evi-fm-master-as-2.1.0.tgz
+    version: 2.1.0
+  - apiVersion: v2
+    appVersion: 1.16.0
     created: "2024-03-01T10:55:06.871556467Z"
     description: A Helm chart for Kubernetes
     digest: c3722321fcc6b9603485fd656a9d759051f5a8f3ead01e87518754be91543a51
@@ -1719,4 +1729,4 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/vault-0.8.0/vault-0.8.0.tgz
     version: 0.8.0
-generated: "2024-03-05T01:56:48.945177992Z"
+generated: "2024-03-05T01:57:01.32305063Z"
