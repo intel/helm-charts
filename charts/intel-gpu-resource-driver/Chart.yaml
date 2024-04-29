@@ -3,5 +3,5 @@ name: intel-gpu-resource-driver
 description: A Helm chart for a Dynamic Resource Allocation (DRA) Intel GPU Resource Driver
 
 type: application
-version: 0.3.0
-appVersion: "v0.3.0"
+version: 0.4.0
+appVersion: "v0.4.0"
