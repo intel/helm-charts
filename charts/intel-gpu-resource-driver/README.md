@@ -34,10 +34,12 @@ helm show values intel/intel-gpu-resource-driver
 
 You may also run `helm show values` on this chart's dependencies for additional options.
 
-|parameter| value |
-|---------|-----------|
-| `image.repository` | `intel` |
-| `image.tag` | `v0.3.0` |
+| Key | Type | Default |
+|-----|------|---------|
+| image.repository | string | `intel` |
+| image.name | string | `"intel-gpu-resource-driver"` |
+| image.pullPolicy | string | `"IfNotPresent"` |
+| image.tag | string | `"v0.4.0"` |
 
 If you change the image tag to be used in Helm chart deployment, ensure that the version of the container image is consistent with CRDs and deployment YAMLs - they might change between releases.
 
