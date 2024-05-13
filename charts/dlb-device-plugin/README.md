@@ -38,3 +38,4 @@ You may also run `helm show values` on this chart's dependencies for additional 
 | `initImage.hub` | `intel` |
 | `initImage.tag` | `` |
 | `logLevel` | `4` |
+| `tolerations` | `` |

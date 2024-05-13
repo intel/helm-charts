@@ -39,3 +39,4 @@ You may also run `helm show values` on this chart's dependencies for additional 
 | `initImage.tag` | `` |
 | `sharedDevNum` | `10` |
 | `logLevel` | `4` |
+| `tolerations` | `` |
