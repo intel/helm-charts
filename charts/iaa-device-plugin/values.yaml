@@ -14,4 +14,4 @@ logLevel: 4
 nodeSelector:
   intel.feature.node.kubernetes.io/iaa: 'true'
 
-nodeFeatureRule: false
+nodeFeatureRule: true

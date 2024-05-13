@@ -14,4 +14,4 @@ logLevel: 4
 nodeSelector:
   intel.feature.node.kubernetes.io/dsa: 'true'
 
-nodeFeatureRule: false
+nodeFeatureRule: true

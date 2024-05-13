@@ -11,4 +11,4 @@ logLevel: 4
 nodeSelector:
   intel.feature.node.kubernetes.io/sgx: 'true'
 
-nodeFeatureRule: false
+nodeFeatureRule: true
