@@ -1,11 +1,11 @@
 name: dlbdeviceplugin-sample
 
 image:
-  hub: intel  
+  hub: intel
   tag: ""
 
 initImage:
-  hub: intel  
+  hub: intel
   tag: ""
 
 logLevel: 4
@@ -13,4 +13,6 @@ logLevel: 4
 nodeSelector:
   intel.feature.node.kubernetes.io/dlb: 'true'
 
-nodeFeatureRule: false
+tolerations:
+
+nodeFeatureRule: true

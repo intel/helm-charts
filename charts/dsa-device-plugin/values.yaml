@@ -1,11 +1,11 @@
 name: dsadeviceplugin-sample
 
 image:
-  hub: intel    
+  hub: intel
   tag: ""
 
 initImage:
-  hub: intel  
+  hub: intel
   tag: ""
 
 sharedDevNum: 10
@@ -14,4 +14,6 @@ logLevel: 4
 nodeSelector:
   intel.feature.node.kubernetes.io/dsa: 'true'
 
-nodeFeatureRule: false
+tolerations:
+
+nodeFeatureRule: true
