@@ -20,6 +20,8 @@ spec:
   preferredAllocationPolicy: {{ .Values.allocationPolicy }}
 
   nodeSelector: {{- .Values.nodeSelector | toYaml | nindent 4 }}
+  tolerations: {{- .Values.tolerations | toYaml | nindent 4 }}
+
 ---
 {{- if eq .Values.nodeFeatureRule true }}
 apiVersion: nfd.k8s-sigs.io/v1alpha1
@@ -36,9 +38,23 @@ spec:
           matchExpressions:
             vendor: {op: In, value: ["8086"]}
             class: {op: In, value: ["0300", "0380"]}
-        - feature: kernel.loadedmodule
-          matchExpressions:
-            i915: {op: Exists}
+      matchAny:
+        - matchFeatures:
+          - feature: kernel.loadedmodule
+            matchExpressions:
+              i915: {op: Exists}
+        - matchFeatures:
+          - feature: kernel.enabledmodule
+            matchExpressions:
+              i915: {op: Exists}
+        - matchFeatures:
+          - feature: kernel.loadedmodule
+            matchExpressions:
+              xe: {op: Exists}
+        - matchFeatures:
+          - feature: kernel.enabledmodule
+            matchExpressions:
+              xe: {op: Exists}
 ---
 apiVersion: nfd.k8s-sigs.io/v1alpha1
 kind: NodeFeatureRule

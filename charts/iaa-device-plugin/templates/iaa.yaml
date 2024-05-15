@@ -15,6 +15,7 @@ spec:
   sharedDevNum: {{ .Values.sharedDevNum }}
   logLevel: {{ .Values.logLevel }}
   nodeSelector: {{- .Values.nodeSelector | toYaml | nindent 4 }}
+  tolerations: {{- .Values.tolerations | toYaml | nindent 4 }}
 
 ---
 {{ if eq .Values.nodeFeatureRule true }}
