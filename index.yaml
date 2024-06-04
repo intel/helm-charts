@@ -205,6 +205,22 @@ entries:
   evi-consul:
   - apiVersion: v2
     appVersion: 1.14.2
+    created: "2024-06-04T06:33:32.453551701Z"
+    dependencies:
+    - name: consul
+      repository: https://helm.releases.hashicorp.com
+      tags:
+      - consul
+      version: 1.1.1
+    description: A Helm chart for Kubernetes
+    digest: d8348cbe06a888a79eea0a435bc18e6235b7cc8aa35870ff3343f7bac3fe28da
+    name: evi-consul
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/evi-consul-3.0.0/evi-consul-3.0.0.tgz
+    version: 3.0.0
+  - apiVersion: v2
+    appVersion: 1.14.2
     created: "2024-03-05T01:56:48.944881778Z"
     dependencies:
     - name: consul
@@ -2027,4 +2043,4 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/vault-0.8.0/vault-0.8.0.tgz
     version: 0.8.0
-generated: "2024-06-04T06:33:17.272331225Z"
+generated: "2024-06-04T06:33:32.453840598Z"
