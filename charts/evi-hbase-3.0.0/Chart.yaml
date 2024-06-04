@@ -1,0 +1,13 @@
+apiVersion: v2
+appVersion: 1.16.0
+dependencies:
+- condition: hbase.enabled
+  name: hbase
+  repository: https://itboy87.github.io/bigdata-charts/
+  tags:
+  - hbase
+  version: 0.1.7
+description: A Helm chart for Kubernetes
+name: evi-hbase
+type: application
+version: 3.0.0

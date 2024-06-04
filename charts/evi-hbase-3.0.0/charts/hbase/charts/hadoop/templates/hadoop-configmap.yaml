@@ -1,0 +1,323 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "hadoop.fullname" . }}
+  labels:
+    app.kubernetes.io/name: {{ include "hadoop.name" . }}
+    helm.sh/chart: {{ include "hadoop.chart" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+data:
+  bootstrap.sh: |
+    #!/bin/bash -x
+
+    echo Starting
+
+    : ${HADOOP_HOME:=/opt/hadoop}
+
+    echo Using ${HADOOP_HOME} as HADOOP_HOME
+
+    . $HADOOP_HOME/etc/hadoop/hadoop-env.sh
+
+    # ------------------------------------------------------
+    # Directory to find config artifacts
+    # ------------------------------------------------------
+
+    CONFIG_DIR="/tmp/hadoop-config"
+
+    # ------------------------------------------------------
+    # Copy config files from volume mount
+    # ------------------------------------------------------
+
+    for f in slaves core-site.xml hdfs-site.xml mapred-site.xml yarn-site.xml; do
+      if [[ -e ${CONFIG_DIR}/$f ]]; then
+        cp ${CONFIG_DIR}/$f $HADOOP_HOME/etc/hadoop/$f
+      else
+        echo "ERROR: Could not find $f in $CONFIG_DIR"
+        exit 1
+      fi
+    done
+
+    # ------------------------------------------------------
+    # installing libraries if any
+    # (resource urls added comma separated to the ACP system variable)
+    # ------------------------------------------------------
+    cd $HADOOP_HOME/share/hadoop/common ; for cp in ${ACP//,/ }; do  echo == $cp; curl -LO $cp ; done; cd -
+
+    # ------------------------------------------------------
+    # Start NAMENODE
+    # ------------------------------------------------------
+    if [[ "${HOSTNAME}" =~ "hdfs-nn" ]]; then
+      # sed command changing REPLACEME in $HADOOP_HOME/etc/hadoop/hdfs-site.xml to actual port numbers
+    #  sed -i "s/EXTERNAL_HTTP_PORT_REPLACEME/9864/" $HADOOP_HOME/etc/hadoop/hdfs-site.xml
+    #  sed -i "s/EXTERNAL_DATA_PORT_REPLACEME/9866/" $HADOOP_HOME/etc/hadoop/hdfs-site.xml
+
+      mkdir -p /root/hdfs/namenode
+      if [ ! -f /root/hdfs/namenode/formated ]; then
+        # Only format if necessary
+        $HADOOP_HOME/bin/hdfs namenode -format -force -nonInteractive && echo 1 > /root/hdfs/namenode/formated
+      fi
+      $HADOOP_HOME/bin/hdfs --loglevel {{ .Values.logLevel }} --daemon start namenode
+    fi
+
+    # ------------------------------------------------------
+    # Start DATA NODE
+    # ------------------------------------------------------
+    if [[ "${HOSTNAME}" =~ "hdfs-dn" ]]; then
+      # Split hostname at "-" into an array
+      # Example hostname: hadoop-hadoop-hdfs-dn-0
+      HOSTNAME_ARR=(${HOSTNAME//-/ })
+      # Add instance number to start of external port ranges
+    #  EXTERNAL_HTTP_PORT=$(({{ .Values.hdfs.dataNode.externalHTTPPortRangeStart }} + ${HOSTNAME_ARR[4]}))
+    #  EXTERNAL_DATA_PORT=$(({{ .Values.hdfs.dataNode.externalDataPortRangeStart }} + ${HOSTNAME_ARR[4]}))
+
+      # sed command changing REPLACEME in $HADOOP_HOME/etc/hadoop/hdfs-site.xml to actual port numbers
+    #  sed -i "s/EXTERNAL_HTTP_PORT_REPLACEME/${EXTERNAL_HTTP_PORT}/" $HADOOP_HOME/etc/hadoop/hdfs-site.xml
+    #  sed -i "s/EXTERNAL_DATA_PORT_REPLACEME/${EXTERNAL_DATA_PORT}/" $HADOOP_HOME/etc/hadoop/hdfs-site.xml
+
+      mkdir -p /root/hdfs/datanode
+
+      #  Wait (with timeout) for namenode
+      TMP_URL="http://{{ include "hadoop.fullname" . }}-hdfs-nn:9870"
+      if timeout 5m bash -c "until curl -sf $TMP_URL; do echo Waiting for $TMP_URL; sleep 5; done"; then
+        $HADOOP_HOME/bin/hdfs --loglevel {{ .Values.logLevel }} --daemon start datanode
+      else 
+        echo "$0: Timeout waiting for $TMP_URL, exiting."
+        exit 1
+      fi
+
+    fi
+
+    # ------------------------------------------------------
+    # Start RESOURCE MANAGER and PROXY SERVER as daemons
+    # ------------------------------------------------------
+    if [[ "${HOSTNAME}" =~ "yarn-rm" ]]; then
+      $HADOOP_HOME/bin/yarn --loglevel {{ .Values.logLevel }} --daemon start resourcemanager 
+      $HADOOP_HOME/bin/yarn --loglevel {{ .Values.logLevel }} --daemon start proxyserver
+    fi
+
+    # ------------------------------------------------------
+    # Start NODE MANAGER
+    # ------------------------------------------------------
+    if [[ "${HOSTNAME}" =~ "yarn-nm" ]]; then
+      sed -i '/<\/configuration>/d' $HADOOP_HOME/etc/hadoop/yarn-site.xml
+      cat >> $HADOOP_HOME/etc/hadoop/yarn-site.xml <<- EOM
+      <property>
+        <name>yarn.nodemanager.resource.memory-mb</name>
+        <value>${MY_MEM_LIMIT:-2048}</value>
+      </property>
+
+      <property>
+        <name>yarn.nodemanager.resource.cpu-vcores</name>
+        <value>${MY_CPU_LIMIT:-2}</value>
+      </property>
+    EOM
+
+      echo '</configuration>' >> $HADOOP_HOME/etc/hadoop/yarn-site.xml
+
+      # Wait with timeout for resourcemanager
+      TMP_URL="http://{{ include "hadoop.fullname" . }}-yarn-rm:8088/ws/v1/cluster/info"
+      if timeout 5m bash -c "until curl -sf $TMP_URL; do echo Waiting for $TMP_URL; sleep 5; done"; then
+        #wait for zookeeper to get leaders after nn live
+        sleep 10;
+        $HADOOP_HOME/bin/yarn nodemanager --loglevel {{ .Values.logLevel }}
+      else 
+        echo "$0: Timeout waiting for $TMP_URL, exiting."
+        exit 1
+      fi
+
+    fi
+
+    # ------------------------------------------------------
+    # Tail logfiles for daemonized workloads (parameter -d)
+    # ------------------------------------------------------
+    if [[ $1 == "-d" ]]; then
+      until find ${HADOOP_HOME}/logs -mmin -1 | egrep -q '.*'; echo "`date`: Waiting for logs..." ; do sleep 2 ; done
+      tail -F ${HADOOP_HOME}/logs/* &
+      while true; do sleep 1000; done
+    fi
+
+    # ------------------------------------------------------
+    # Start bash if requested (parameter -bash)
+    # ------------------------------------------------------
+    if [[ $1 == "-bash" ]]; then
+      /bin/bash
+    fi
+
+  core-site.xml: |
+    <?xml version="1.0"?>
+    <?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+    <configuration>
+      <property>
+            <name>fs.defaultFS</name>
+            <value>hdfs://{{ include "hadoop.fullname" . }}-hdfs-nn:9000/</value>
+            <description>NameNode URI</description>
+        </property>
+    </configuration>
+
+  hdfs-site.xml: |
+    <?xml version="1.0"?>
+    <?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+    <configuration>
+    
+{{- if .Values.hdfs.webhdfs.enabled -}}
+      <property>
+          <name>dfs.webhdfs.enabled</name>
+          <value>true</value>
+      </property> 
+{{- end -}}
+
+      <property>
+        <name>dfs.datanode.use.datanode.hostname</name>
+        <value>false</value>
+      </property>
+
+      <property>
+        <name>dfs.client.use.datanode.hostname</name>
+        <value>false</value>
+      </property>
+
+{{/*      <property>*/}}
+{{/*        <name>dfs.datanode.hostname</name>*/}}
+{{/*        <value>{{ .Values.hdfs.dataNode.externalHostname }}</value>*/}}
+{{/*      </property>*/}}
+
+{{/*      <property>*/}}
+{{/*        <name>dfs.datanode.http.address</name>*/}}
+{{/*        <value>0.0.0.0:EXTERNAL_HTTP_PORT_REPLACEME</value>*/}}
+{{/*      </property>*/}}
+
+{{/*      <property>*/}}
+{{/*        <name>dfs.datanode.address</name>*/}}
+{{/*        <value>0.0.0.0:EXTERNAL_DATA_PORT_REPLACEME</value>*/}}
+{{/*      </property>*/}}
+
+      <property>
+        <name>dfs.replication</name>
+          <value>3</value>
+      </property>
+
+      <property>
+        <name>dfs.datanode.data.dir</name>
+        <value>file:///root/hdfs/datanode</value>
+        <description>DataNode directory</description>
+      </property>
+
+      <property>
+        <name>dfs.namenode.name.dir</name>
+        <value>file:///root/hdfs/namenode</value>
+        <description>NameNode directory for namespace and transaction logs storage.</description>
+      </property>
+
+      <property>
+        <name>dfs.namenode.datanode.registration.ip-hostname-check</name>
+        <value>false</value>
+      </property>
+
+      <!-- Bind to all interfaces -->
+      <property>
+        <name>dfs.namenode.rpc-bind-host</name>
+        <value>0.0.0.0</value>
+      </property>
+      <property>
+        <name>dfs.namenode.servicerpc-bind-host</name>
+        <value>0.0.0.0</value>
+      </property>
+      <!-- /Bind to all interfaces -->
+
+    </configuration>
+
+  mapred-site.xml: |
+    <?xml version="1.0"?>
+    <?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+
+    <configuration>
+      <property>
+        <name>mapreduce.framework.name</name>
+        <value>yarn</value>
+      </property>
+      <property>
+        <name>mapreduce.jobhistory.address</name>
+        <value>{{ include "hadoop.fullname" . }}-yarn-rm-0.{{ include "hadoop.fullname" . }}-yarn-rm.{{ .Release.Namespace }}.svc.cluster.local:10020</value>
+      </property>
+      <property>
+        <name>mapreduce.jobhistory.webapp.address</name>
+        <value>{{ include "hadoop.fullname" . }}-yarn-rm-0.{{ include "hadoop.fullname" . }}-yarn-rm.{{ .Release.Namespace }}.svc.cluster.local:19888</value>
+      </property>
+    </configuration>
+
+  slaves: |
+    localhost
+
+  yarn-site.xml: |
+    <?xml version="1.0"?>
+    <?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+
+    <configuration>
+      <property>
+        <name>yarn.resourcemanager.hostname</name>
+        <value>{{ include "hadoop.fullname" . }}-yarn-rm</value>
+      </property>
+
+      <!-- Bind to all interfaces -->
+      <property>
+        <name>yarn.resourcemanager.bind-host</name>
+        <value>0.0.0.0</value>
+      </property>
+      <property>
+        <name>yarn.nodemanager.bind-host</name>
+        <value>0.0.0.0</value>
+      </property>
+      <property>
+        <name>yarn.timeline-service.bind-host</name>
+        <value>0.0.0.0</value>
+      </property>
+      <!-- /Bind to all interfaces -->
+
+      <property>
+        <name>yarn.nodemanager.vmem-check-enabled</name>
+        <value>false</value>
+      </property>
+
+      <property>
+        <name>yarn.nodemanager.aux-services</name>
+        <value>mapreduce_shuffle</value>
+      </property>
+
+      <property>
+        <name>yarn.nodemanager.aux-services.mapreduce_shuffle.class</name>
+        <value>org.apache.hadoop.mapred.ShuffleHandler</value>
+      </property>
+
+      <property>
+        <description>List of directories to store localized files in.</description>
+        <name>yarn.nodemanager.local-dirs</name>
+        <value>/var/lib/hadoop-yarn/cache/${user.name}/nm-local-dir</value>
+      </property>
+
+      <property>
+        <description>Where to store container logs.</description>
+        <name>yarn.nodemanager.log-dirs</name>
+        <value>/var/log/hadoop-yarn/containers</value>
+      </property>
+
+      <property>
+        <description>Where to aggregate logs to.</description>
+        <name>yarn.nodemanager.remote-app-log-dir</name>
+        <value>/var/log/hadoop-yarn/apps</value>
+      </property>
+
+      <property>
+        <name>yarn.application.classpath</name>
+        <value>
+          /opt/hadoop/etc/hadoop,
+          /opt/hadoop/share/hadoop/common/*,
+          /opt/hadoop/share/hadoop/common/lib/*,
+          /opt/hadoop/share/hadoop/hdfs/*,
+          /opt/hadoop/share/hadoop/hdfs/lib/*,
+          /opt/hadoop/share/hadoop/mapreduce/*,
+          /opt/hadoop/share/hadoop/mapreduce/lib/*,
+          /opt/hadoop/share/hadoop/yarn/*,
+          /opt/hadoop/share/hadoop/yarn/lib/*
+        </value>
+      </property>
+    </configuration>
