@@ -1,0 +1,81 @@
+# INTEL CONFIDENTIAL
+#
+# Copyright (C) 2022 Intel Corporation.
+#
+# This software and the related documents are Intel copyrighted materials, and your use of
+# them is governed by the express license under which they were provided to you (License).
+# Unless the License provides otherwise, you may not use, modify, copy, publish, distribute,
+# disclose or transmit this software or the related documents without Intel's prior written permission.
+#
+# This software and the related documents are provided as is, with no express or implied warranties,
+# other than those that are expressly stated in the License.
+
+---
+# Default values for storage-rest.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+namespace:
+  create: false
+  value: smartedge-apps
+  istioInjection:
+    create: false
+
+istioInjection: false
+
+image:
+  repository: evi-task-rest
+  Version: 0.4
+  pullPolicy: IfNotPresent
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: "sa-task-manager"
+
+service:
+  name: evi-task-manager
+  type: ClusterIP
+  port: 9900
+  targetPort: 9900
+
+configMap:
+  name: "task-manager-cm"
+  storageRest:
+    addr: evi-storage-rest.smartedge-apps
+    port: 9900
+  aiInference:
+    addr: evi-ai-inference.smartedge-apps
+    port: 50052
+  rtspService:
+    addr: evi-rtsp-client.smartedge-apps
+    port: 9800
+  rtspServiceCount: 1
+  clusterService:
+    addr: evi-clustering-archiving.smartedge-apps
+    port: 8080
+
+
+# livenessProbe settings for deployment
+liveness:
+  path: "/api/check"
+  httpHeaders:
+    name: Custom-Header
+    value: Awesome
+  initialDelaySeconds: 30
+  periodSeconds: 60
+  timeoutSeconds: 5
+
+
+# all sudo as root to enable modification on /etc/hosts
+securityContext:
+  allowPrivilegeEscalation: true
+
+# settings of entrypoint.sh args
+entrypoint:
+  sleep: 60
+  csvCounts: 10
