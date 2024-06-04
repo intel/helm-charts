@@ -1,0 +1,11 @@
+apiVersion: v2
+appVersion: 15.2.0
+dependencies:
+- name: postgresql
+  repository: https://charts.bitnami.com/bitnami
+  tags:
+  - postgresql
+  version: 12.2.7
+description: A Helm chart for Kubernetes
+name: evi-postgresql
+version: 3.0.0
