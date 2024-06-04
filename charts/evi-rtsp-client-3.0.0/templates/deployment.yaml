@@ -1,0 +1,128 @@
+# INTEL CONFIDENTIAL
+#
+# Copyright (C) 2024 Intel Corporation.
+#
+# This software and the related documents are Intel copyrighted materials, and your use of
+# them is governed by the express license under which they were provided to you (License).
+# Unless the License provides otherwise, you may not use, modify, copy, publish, distribute,
+# disclose or transmit this software or the related documents without Intel's prior written permission.
+#
+# This software and the related documents are provided as is, with no express or implied warranties,
+# other than those that are expressly stated in the License.
+
+---
+{{- if .Values.global.namespace.create -}}
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.global.namespace.value }}
+{{ if .Values.global.namespace.istioInjection.create }}
+  labels:
+    istio-injection: enabled
+{{ end }}
+{{- end -}}
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.global.deployment.name }}
+  namespace: {{ .Values.global.namespace.value }}
+  annotations:
+    container.apparmor.security.beta.kubernetes.io/rtsp-client: runtime/default
+spec:
+  selector:
+    matchLabels:
+      app: rtsp-client
+      version: v1
+  replicas: {{ .Values.replicaCount }}
+  template:
+    metadata:
+      labels:
+        app: rtsp-client
+        sidecar.istio.io/inject: "{{ .Values.istioInjection }}"
+        version: v1
+    spec:
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccountName: {{ .Values.global.service.name }}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 1
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - rtsp-client
+              topologyKey: kubernetes.io/hostname
+      containers:
+      - name: {{ .Values.global.deployment.name }}
+        image: "{{ .Values.image.repository }}:{{ .Values.image.version }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        securityContext:
+          # readOnlyRootFilesystem: true
+          allowPrivilegeEscalation: false
+        resources:
+          requests:
+            cpu: {{ .Values.resources.requests.cpu }}
+            memory: {{ .Values.resources.requests.memory }}
+          limits:
+            cpu: {{ .Values.resources.limits.cpu }}
+            memory: {{ .Values.resources.limits.memory }}
+        env:
+        - name: HVA_NODE_DIR
+          value: "{{ .Values.environment.HVA_NODE_DIR_PATH }}"
+        livenessProbe:
+          httpGet:
+            path: /api/
+            port:  {{ .Values.image.restfulPort }}
+          initialDelaySeconds: 120
+          periodSeconds: 60
+        startupProbe:
+          httpGet:
+            path: /api/
+            port:  {{ .Values.image.restfulPort }}
+          failureThreshold: 5
+          periodSeconds: 10
+        securityContext:
+          privileged: true
+        ports:
+        - containerPort: {{ .Values.image.restfulPort }}
+          name: restful
+        volumeMounts:
+        - name: rtsp-client-cm
+          mountPath: {{ .Values.configMap.rootPath.value }}{{ .Values.configMap.rtspClient.relativePathInContainer }}
+          subPath: pipeline_rtsp.json
+        - name: media-storage-cm
+          mountPath: {{ .Values.configMap.rootPath.value }}{{ .Values.configMap.mediaStorage.relativePathInContainer }}
+          subPath: media_storage_configmap.json
+        - name: media-storage-secret
+          mountPath: {{ .Values.configMap.mediaStorage.secretMountPath }}
+          readOnly: true
+        - name: camera-secret
+          mountPath: {{ .Values.secret.camera.secretMountPath }}
+          readOnly: true
+      volumes:
+      - name: rtsp-client-cm
+        configMap:
+          name: {{ .Values.configMap.rtspClient.name }}
+      - name: media-storage-cm
+        configMap:
+          name: {{ .Values.configMap.mediaStorage.name }}
+      - name: media-storage-secret
+        secret:
+          secretName: {{ .Values.global.secret.minio.name }}
+          optional: true
+          items:
+          - key: rootUser
+            path: rootUser
+          - key: rootPassword
+            path: rootPassword
+      - name: camera-secret
+        secret:
+          secretName: {{ .Values.secret.camera.name }}
+
