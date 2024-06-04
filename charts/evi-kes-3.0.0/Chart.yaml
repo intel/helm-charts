@@ -1,0 +1,6 @@
+apiVersion: v2
+appVersion: 2023-04-03T16-41-28Z
+description: A Helm chart for Kubernetes
+name: evi-kes
+type: application
+version: 3.0.0
