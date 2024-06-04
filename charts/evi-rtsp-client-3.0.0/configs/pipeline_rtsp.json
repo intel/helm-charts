@@ -1,0 +1,40 @@
+{
+    "Nodes": [
+        {
+            "Node Class Name": "RtspClientNode",
+            "Node Name": "Input",
+            "Thread Number": "1",
+            "Is Source Node": "true",
+            "Configure String": "IPCInfo_placeholder"
+        },
+        {
+            "Node Class Name": "WrapperNode",
+            "Node Name": "Wrapper",
+            "Thread Number": "1",
+            "Is Source Node": "false",
+            "Configure String": "splitDuration_placeholder"
+        },
+        {
+            "Node Class Name": "MediaStorageNode",
+            "Node Name": "Storage",
+            "Thread Number": "1",
+            "Is Source Node": "false",
+            "Configure String": "configRootPath_placeholderstorageConfigPath_placeholder"
+        }
+    ],
+    "Links": [
+        {
+            "Previous Node": "Input",
+            "Previous Node Port": "0",
+            "Next Node": "Wrapper",
+            "Next Node Port": "0"
+        },
+        {
+            "Previous Node": "Wrapper",
+            "Previous Node Port": "0",
+            "Next Node": "Storage",
+            "Next Node Port": "0"
+        }
+    ]
+}
+
