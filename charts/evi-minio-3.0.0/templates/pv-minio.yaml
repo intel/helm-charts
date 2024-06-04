@@ -1,0 +1,67 @@
+# INTEL CONFIDENTIAL
+#
+# Copyright (C) 2022-2023 Intel Corporation.
+#
+# This software and the related documents are Intel copyrighted materials, and your use of
+# them is governed by the express license under which they were provided to you (License).
+# Unless the License provides otherwise, you may not use, modify, copy, publish, distribute,
+# disclose or transmit this software or the related documents without Intel's prior written permission.
+#
+# This software and the related documents are provided as is, with no express or implied warranties,
+# other than those that are expressly stated in the License.
+
+---
+{{- with (index .Values.minio.hostname 0) }}
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: minio-pv-main
+  labels:
+    app: minio
+spec:
+  capacity:
+    storage: {{ $.Values.minio.capacity }}
+  accessModes:
+  - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Delete
+  storageClassName: {{ $.Values.minio.persistence.storageClass }}
+  local:
+    path: {{ $.Values.minio.storagePath }}
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: kubernetes.io/hostname
+          operator: In
+          values:
+          - {{ . }}
+{{- end }}
+
+{{- if eq .Values.minio.mode "distributed" -}}
+{{- range $i, $hostName := .Values.minio.hostname }}
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: minio-pv{{ $i }}
+  labels:
+    app: minio
+spec:
+  capacity:
+    storage: {{ $.Values.minio.capacity }}
+  accessModes:
+  - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Delete
+  storageClassName: {{ $.Values.minio.persistence.storageClass }}
+  local:
+    path: {{ $.Values.minio.storagePath }}_{{ $hostName | trimAll " " | trimAll "'" }}
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: kubernetes.io/hostname
+          operator: In
+          values:
+          - {{ $hostName | trimAll " " }}
+{{- end }}
+{{- end -}}
