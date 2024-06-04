@@ -658,6 +658,17 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/evi-redis-0.8.2/evi-redis-0.8.2.tgz
     version: 0.8.2
+  evi-rtsp-client:
+  - apiVersion: v2
+    appVersion: 1.16.0
+    created: "2024-06-04T06:34:49.96324964Z"
+    description: A Helm chart for Kubernetes
+    digest: 21a07a23ce5272f34d2fa3475e21acd842e98f474bdd7ff97f840875956a5407
+    name: evi-rtsp-client
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/evi-rtsp-client-3.0.0/evi-rtsp-client-3.0.0.tgz
+    version: 3.0.0
   evi-storage-rest:
   - apiVersion: v2
     appVersion: 1.16.0
@@ -2111,4 +2122,4 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/vault-0.8.0/vault-0.8.0.tgz
     version: 0.8.0
-generated: "2024-06-04T06:34:38.423877756Z"
+generated: "2024-06-04T06:34:49.963726173Z"
