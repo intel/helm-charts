@@ -700,6 +700,17 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/evi-storage-rest-0.8.5/evi-storage-rest-0.8.5.tgz
     version: 0.8.5
+  evi-task-manager:
+  - apiVersion: v2
+    appVersion: 1.16.0
+    created: "2024-06-04T06:35:00.099282582Z"
+    description: A Helm chart for Kubernetes
+    digest: d43b65ad10011fd28a04090564d008509d3194453ee349b2a4a6f65859508a4a
+    name: evi-task-manager
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/evi-task-manager-3.0.0/evi-task-manager-3.0.0.tgz
+    version: 3.0.0
   evi-test-tool:
   - apiVersion: v2
     appVersion: 1.16.0
@@ -2132,4 +2143,4 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/vault-0.8.0/vault-0.8.0.tgz
     version: 0.8.0
-generated: "2024-06-04T06:34:53.994449045Z"
+generated: "2024-06-04T06:35:00.099619888Z"
