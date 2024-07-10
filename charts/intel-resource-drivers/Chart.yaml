@@ -1,0 +1,7 @@
+apiVersion: v2
+name: intel-resource-drivers
+description: A Helm chart for Dynamic Resource Allocation (DRA) Intel Resource Drivers
+
+type: application
+version: 0.5.1
+appVersion: "v0.5.1"

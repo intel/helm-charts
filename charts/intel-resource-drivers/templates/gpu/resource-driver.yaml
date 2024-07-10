@@ -1,30 +1,26 @@
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
-  name: {{ include "intel-gpu-resource-driver.name" .}}-kubelet-plugin
+  name: intel-gpu-resource-driver-kubelet-plugin
   namespace: {{ include "intel-gpu-resource-driver.namespace" . }}
   labels:
     {{- include "intel-gpu-resource-driver.labels" . | nindent 4 }}
 spec:
   selector:
     matchLabels:
-      {{- include "intel-gpu-resource-driver.selectorLabels" . | nindent 6 }}
+      app: intel-gpu-resource-driver
   template:
     metadata:
-      {{- with .Values.kubeletPlugin.podAnnotations }}
-      annotations:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
       labels:
-       {{- include "intel-gpu-resource-driver.templateLabels" . | nindent 8 }}
+        app: intel-gpu-resource-driver
     spec:
       serviceAccount: intel-gpu-resource-driver-service-account
       serviceAccountName: {{ include "intel-gpu-resource-driver.serviceAccountName" . }}
       initContainers:
       - name: init
-        image: {{ include "intel-gpu-resource-driver.fullimage" . }}
-        imagePullPolicy: {{ .Values.image.pullPolicy }}
-        command: ["/gas-status-updater", "--status", "NotReady"]
+        image: {{ include "intel-gpu-resource-driver.gpu.fullimage" . }}
+        imagePullPolicy: {{ .Values.gpu.image.pullPolicy }}
+        command: ["/kubelet-gpu-plugin", "--status", "NotReady"]
         env:
         - name: NODE_NAME
           valueFrom:
@@ -35,11 +31,11 @@ spec:
             fieldRef:
               fieldPath: metadata.namespace
         securityContext:
-          {{- toYaml .Values.kubeletPlugin.containers.init.securityContext | nindent 10 }}
+          {{- toYaml .Values.gpu.kubeletPlugin.containers.init.securityContext | nindent 10 }}
       containers:
       - name: kubelet-plugin
-        image: {{ include "intel-gpu-resource-driver.fullimage" . }}
-        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        image: {{ include "intel-gpu-resource-driver.gpu.fullimage" . }}
+        imagePullPolicy: {{ .Values.gpu.image.pullPolicy }}
         command: ["/kubelet-gpu-plugin"]
         env:
         - name: NODE_NAME
@@ -72,7 +68,7 @@ spec:
         - name: sysfs
           mountPath: "/sysfs"
         securityContext:
-           {{- toYaml .Values.kubeletPlugin.containers.plugin.securityContext | nindent 10 }}
+           {{- toYaml .Values.gpu.kubeletPlugin.containers.plugin.securityContext | nindent 10 }}
       volumes:
       - name: plugins-registry
         hostPath:
@@ -92,15 +88,15 @@ spec:
       - name: defaults
         configMap:
           name: defaults
-      {{- with .Values.kubeletPlugin.tolerations }}
+      {{- with .Values.gpu.kubeletPlugin.tolerations }}
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with .Values.kubeletPlugin.nodeSelector }}
+      {{- with .Values.gpu.kubeletPlugin.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with .Values.kubeletPlugin.affinity }}
+      {{- with .Values.gpu.kubeletPlugin.affinity }}
       affinity:
         {{- toYaml . | nindent 8 }}
       {{- end }}
@@ -108,7 +104,7 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "intel-gpu-resource-driver.name" . }}-controller
+  name: intel-gpu-resource-driver-controller
   namespace: {{ include "intel-gpu-resource-driver.namespace" . }}
   labels:
      {{- include "intel-gpu-resource-driver.labels" . | nindent 4 }}
@@ -116,22 +112,18 @@ spec:
   replicas: 1
   selector:
     matchLabels:
-      {{- include "intel-gpu-resource-driver.selectorLabels" . | nindent 6 }}
+      app: intel-gpu-resource-driver
   template:
     metadata:
-      {{- with .Values.controller.podAnnotations }}
-      annotations:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
       labels:
-        {{- include "intel-gpu-resource-driver.templateLabels" . | nindent 8 }}
+        app: intel-gpu-resource-driver
     spec:
       serviceAccount: intel-gpu-resource-driver-service-account
       serviceAccountName: {{ include "intel-gpu-resource-driver.serviceAccountName" . }}
       containers:
       - name: controller
-        image:  {{ include "intel-gpu-resource-driver.fullimage" . }}
-        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        image:  {{ include "intel-gpu-resource-driver.gpu.fullimage" . }}
+        imagePullPolicy: {{ .Values.gpu.image.pullPolicy }}
         command: ["/gpu-controller"]
         env:
         - name: POD_NAMESPACE
@@ -139,16 +131,16 @@ spec:
             fieldRef:
               fieldPath: metadata.namespace
         securityContext:
-          {{- toYaml .Values.controller.containers.controller.securityContext | nindent 10 }}
-      {{- with .Values.controller.tolerations }}
+          {{- toYaml .Values.gpu.controller.containers.controller.securityContext | nindent 10 }}
+      {{- with .Values.gpu.controller.tolerations }}
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with .Values.controller.nodeSelector }}
+      {{- with .Values.gpu.controller.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with .Values.controller.affinity }}
+      {{- with .Values.gpu.controller.affinity }}
       affinity:
         {{- toYaml . | nindent 8 }}
       {{- end }}

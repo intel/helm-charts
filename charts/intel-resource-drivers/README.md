@@ -1,4 +1,4 @@
-# Dynamic Resource Allocation (DRA) Intel GPU Driver Helm Chart
+# Dynamic Resource Allocation (DRA) Intel Drivers Helm Chart
 
 ## Get Helm Repository Info
 ```
@@ -9,27 +9,24 @@ helm repo update
 You can execute `helm search repo intel` command to see pulled charts [optional].
 
 ## Install Helm Chart
-CRDs of the GPU driver are installed as part of the chart first.
-
 ```
-helm install intel-gpu-resource-driver intel/intel-gpu-resource-driver \
---create-namespace --namespace intel-gpu-resource-driver
+helm install intel-resource-drivers intel/intel-resource-drivers
 ```
 ## Upgrade Chart
 ```
-helm upgrade intel-gpu-resource-driver intel/intel-gpu-resource-driver [flags]
+helm upgrade intel-resource-drivers intel/intel-resource-drivers [flags]
 ```
 
 ## Uninstall Chart
 ```
-helm uninstall intel-gpu-resource-driver --namespace intel-gpu-resource-driver
+helm uninstall intel-resource-drivers
 ```
 
 ## Configuration
 See [Customizing the Chart Before Installing](https://helm.sh/docs/intro/using_helm/#customizing-the-chart-before-installing). To see all configurable options with detailed comments:
 
 ```console
-helm show values intel/intel-gpu-resource-driver
+helm show values intel/intel-resource-drivers
 ```
 
 You may also run `helm show values` on this chart's dependencies for additional options.
@@ -37,9 +34,9 @@ You may also run `helm show values` on this chart's dependencies for additional 
 | Key | Type | Default |
 |-----|------|---------|
 | image.repository | string | `intel` |
-| image.name | string | `"intel-gpu-resource-driver"` |
+| image.name | string | `"intel-resource-drivers"` |
 | image.pullPolicy | string | `"IfNotPresent"` |
-| image.tag | string | `"v0.4.0"` |
+| image.tag | string | `"v0.5.1"` |
 
 If you change the image tag to be used in Helm chart deployment, ensure that the version of the container image is consistent with CRDs and deployment YAMLs - they might change between releases.
 

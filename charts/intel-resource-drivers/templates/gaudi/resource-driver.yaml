@@ -1,0 +1,147 @@
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: intel-gaudi-resource-driver-kubelet-plugin
+  namespace: {{ include "intel-gaudi-resource-driver.namespace" . }}
+  labels:
+    {{- include "intel-gaudi-resource-driver.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+     app: intel-gaudi-resource-driver
+  template:
+    metadata:
+      labels:
+        app: intel-gaudi-resource-driver
+    spec:
+      serviceAccount: intel-gaudi-resource-driver-service-account
+      serviceAccountName: {{ include "intel-gaudi-resource-driver.serviceAccountName" . }}
+      initContainers:
+      - name: init
+        image: {{ include "intel-gaudi-resource-driver.fullimage" . }}
+        imagePullPolicy: {{ .Values.gaudi.image.pullPolicy }}
+        command: ["/kubelet-gaudi-plugin", "--status", "NotReady"]
+        env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        securityContext:
+          {{- toYaml .Values.gaudi.kubeletPlugin.containers.init.securityContext | nindent 10 }}
+      containers:
+      - name: kubelet-plugin
+        image: {{ include "intel-gaudi-resource-driver.fullimage" . }}
+        imagePullPolicy: {{ .Values.gaudi.image.pullPolicy }}
+        command: ["/kubelet-gaudi-plugin"]
+        env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: SYSFS_ROOT
+          value: "/sysfs"
+        # Use this to tell kubelet-plugin where the DRI devices nodes should be.
+        # This will be prefix for CDI devices, runtime will try to mount devices
+        # with this prefix into workloads.
+        #- name: DEV_DRI_PATH
+        #  value: "/fake/dri"
+        volumeMounts:
+        - name: plugins-registry
+          mountPath: /var/lib/kubelet/plugins_registry
+        - name: plugins
+          mountPath: /var/lib/kubelet/plugins
+        - name: cdi
+          mountPath: /etc/cdi
+        - name: varruncdi
+          mountPath: /var/run/cdi
+        - name: defaults
+          mountPath: "/defaults"
+          readOnly: true
+        - name: sysfs
+          mountPath: "/sysfs"
+        securityContext:
+          {{- toYaml .Values.gaudi.kubeletPlugin.containers.plugin.securityContext | nindent 10 }}
+      volumes:
+      - name: plugins-registry
+        hostPath:
+          path: /var/lib/kubelet/plugins_registry
+      - name: plugins
+        hostPath:
+          path: /var/lib/kubelet/plugins
+      - name: cdi
+        hostPath:
+          path: /etc/cdi
+      - name: varruncdi
+        hostPath:
+          path: /var/run/cdi
+      - name: sysfs
+        hostPath:
+          path: /sys
+      - name: defaults
+        configMap:
+          name: defaults
+      {{- with .Values.gaudi.kubeletPlugin.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.gaudi.kubeletPlugin.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.gaudi.kubeletPlugin.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: intel-gaudi-resource-driver-controller
+  namespace: {{ include "intel-gaudi-resource-driver.namespace" . }}
+  labels:
+     {{- include "intel-gaudi-resource-driver.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: intel-gaudi-resource-driver
+  template:
+    metadata:
+      labels:
+        app: intel-gaudi-resource-driver
+    spec:
+      serviceAccount: intel-gaudi-resource-driver-service-account
+      serviceAccountName: {{ include "intel-gaudi-resource-driver.serviceAccountName" . }}
+      containers:
+      - name: controller
+        image: {{ include "intel-gaudi-resource-driver.fullimage" . }}
+        imagePullPolicy: {{ .Values.gaudi.image.pullPolicy }}
+        command: ["/gaudi-controller"]
+        env:
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        securityContext:
+           {{- toYaml .Values.gaudi.controller.containers.controller.securityContext | nindent 10 }}
+      {{- with .Values.gaudi.controller.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.gaudi.controller.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.gaudi.controller.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

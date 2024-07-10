@@ -1,0 +1,155 @@
+gpu:
+  fullnameOverride: ""
+  nameOverride: ""
+  namespaceOverride: "intel-gpu-resource-driver"
+
+  imagePullSecrets: []
+  image:
+    repository: intel
+    name: intel-gpu-resource-driver
+    pullPolicy: IfNotPresent
+    tag: "v0.5.1"
+
+  serviceAccount:
+    create: true
+    annotations: {}
+    name: ""
+    automount: true
+
+  rbac:
+    create: true
+    createAggregateClusterRoles: false
+    pspEnabled: false
+    pspUseAppArmor: false
+
+  # gpu controller
+  controller:
+    tolerations:
+      - key: node-role.kubernetes.io/master
+        operator: Exists
+        effect: NoSchedule
+      - key: node-role.kubernetes.io/control-plane
+        operator: Exists
+        effect: NoSchedule
+    nodeSelector:
+      {}
+      #node-role.kubernetes.io/control-plane: ""
+    affinity: {}
+    containers:
+      controller:
+        securityContext:
+          privileged: false
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 10001
+          seccompProfile:
+            type: RuntimeDefault
+
+  # gpu kubelet-plugin
+  kubeletPlugin:
+    containers:
+      init:
+        securityContext:
+          privileged: false
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 10001
+          seccompProfile:
+            type: RuntimeDefault
+      plugin:
+        securityContext:
+          privileged: false
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
+          readOnlyRootFilesystem: true
+          runAsUser: 0
+          seccompProfile:
+            type: RuntimeDefault
+    tolerations: []
+    nodeSelector: {}
+    affinity: {}
+
+gaudi:
+  fullnameOverride: ""
+  nameOverride: ""
+  namespaceOverride: "intel-gaudi-resource-driver"
+
+  imagePullSecrets: []
+  image:
+    repository: intel
+    name: intel-gaudi-resource-driver
+    pullPolicy: IfNotPresent
+    tag: "v0.1.1"
+
+  serviceAccount:
+    create: true
+    annotations: {}
+    name: ""
+    automount: true
+
+  rbac:
+    create: true
+    createAggregateClusterRoles: false
+    pspEnabled: false
+    pspUseAppArmor: false
+
+  # gaudi controller
+  controller:
+    tolerations:
+      - key: node-role.kubernetes.io/master
+        operator: Exists
+        effect: NoSchedule
+      - key: node-role.kubernetes.io/control-plane
+        operator: Exists
+        effect: NoSchedule
+    nodeSelector:
+      {}
+      #node-role.kubernetes.io/control-plane: ""
+    affinity: {}
+    containers:
+      controller:
+        securityContext:
+          privileged: false
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 10001
+          seccompProfile:
+            type: RuntimeDefault
+
+  # gaudi kubelet-plugin
+  kubeletPlugin:
+    containers:
+      init:
+        securityContext:
+          privileged: false
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 10001
+          seccompProfile:
+            type: RuntimeDefault
+      plugin:
+        securityContext:
+          privileged: false
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
+          readOnlyRootFilesystem: true
+          runAsUser: 0
+          seccompProfile:
+            type: RuntimeDefault
+    tolerations: []
+    nodeSelector: {}
+    affinity: {}

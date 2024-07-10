@@ -1,9 +1,9 @@
-{{- if and .Values.rbac.create }}
+{{- if and .Values.gaudi.rbac.create }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: {{ include "intel-gpu-resource-driver.fullname" . }}-role
-  namespace: {{ include "intel-gpu-resource-driver.namespace" . }}
+  name: intel-gaudi-resource-driver-role
+  namespace: {{ include "intel-gaudi-resource-driver.namespace" . }}
 rules:
 - apiGroups: [""]
   resources: ["pods", "nodes", "events"]
@@ -11,7 +11,7 @@ rules:
 - apiGroups: ["resource.k8s.io"]
   resources: ["resourceclaims", "resourceclasses", "podschedulings","resourceclaims/status", "podschedulings/status", "podschedulingcontexts", "podschedulingcontexts/status"]
   verbs: ["get", "update", "list", "watch", "patch"]
-- apiGroups: ["gpu.resource.intel.com"]
+- apiGroups: ["gaudi.resource.intel.com"]
   resources: ["*"]
   verbs: ["*"]
 {{- end }}

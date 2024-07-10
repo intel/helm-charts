@@ -1,0 +1,17 @@
+{{- if and .Values.gpu.rbac.create }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: intel-gpu-resource-driver-role
+  namespace: {{ include "intel-gpu-resource-driver.namespace" . }}
+rules:
+- apiGroups: [""]
+  resources: ["pods", "nodes", "events"]
+  verbs: ["get", "list", "create", "watch", "patch"]
+- apiGroups: ["resource.k8s.io"]
+  resources: ["resourceclaims", "resourceclaimparameters", "resourceclasses", "podschedulings","resourceclaims/status", "podschedulings/status", "podschedulingcontexts", "podschedulingcontexts/status"]
+  verbs: ["create", "get", "update", "list", "watch", "patch"]
+- apiGroups: ["gpu.resource.intel.com"]
+  resources: ["*"]
+  verbs: ["*"]
+{{- end }}
