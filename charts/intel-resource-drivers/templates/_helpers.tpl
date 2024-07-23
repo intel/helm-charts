@@ -32,14 +32,12 @@ app.kubernetes.io/name: {{ include "intel-gpu-resource-driver.name" . }}
 
 {{- define "intel-gpu-resource-driver.serviceAccountName" -}}
 {{- if .Values.gpu.serviceAccount.create -}}
-{{- default (include "intel-gpu-resource-driver.fullname" .) .Values.gpu.serviceAccount.name -}}
-{{- else -}}
-{{- default "default" .Values.gpu.serviceAccount.name -}}
+{{- default "intel-gpu-sa" .Values.gpu.serviceAccount.name -}}
 {{- end -}}
 {{- end }}
 
 {{/* Define full image name for GPU */}}
-{{- define "intel-gpu-resource-driver.gpu.fullimage" -}}
+{{- define "intel-gpu-resource-driver.fullimage" -}}
 {{- printf "%s/%s:%s" .Values.gpu.image.repository .Values.gpu.image.name .Values.gpu.image.tag -}}
 {{- end }}
 
@@ -72,9 +70,7 @@ app.kubernetes.io/name: {{ include "intel-gaudi-resource-driver.name" . }}
 
 {{- define "intel-gaudi-resource-driver.serviceAccountName" -}}
 {{- if .Values.gaudi.serviceAccount.create -}}
-{{- default (include "intel-gaudi-resource-driver.fullname" .) .Values.gaudi.serviceAccount.name -}}
-{{- else -}}
-{{- default "default" .Values.gaudi.serviceAccount.name -}}
+{{- default "intel-gaudi-sa" .Values.gaudi.serviceAccount.name -}}
 {{- end -}}
 {{- end }}
 

@@ -18,7 +18,7 @@ spec:
       serviceAccountName: {{ include "intel-gpu-resource-driver.serviceAccountName" . }}
       initContainers:
       - name: init
-        image: {{ include "intel-gpu-resource-driver.gpu.fullimage" . }}
+        image: {{ include "intel-gpu-resource-driver.fullimage" . }}
         imagePullPolicy: {{ .Values.gpu.image.pullPolicy }}
         command: ["/kubelet-gpu-plugin", "--status", "NotReady"]
         env:
@@ -34,7 +34,7 @@ spec:
           {{- toYaml .Values.gpu.kubeletPlugin.containers.init.securityContext | nindent 10 }}
       containers:
       - name: kubelet-plugin
-        image: {{ include "intel-gpu-resource-driver.gpu.fullimage" . }}
+        image: {{ include "intel-gpu-resource-driver.fullimage" . }}
         imagePullPolicy: {{ .Values.gpu.image.pullPolicy }}
         command: ["/kubelet-gpu-plugin"]
         env:
@@ -122,7 +122,7 @@ spec:
       serviceAccountName: {{ include "intel-gpu-resource-driver.serviceAccountName" . }}
       containers:
       - name: controller
-        image:  {{ include "intel-gpu-resource-driver.gpu.fullimage" . }}
+        image:  {{ include "intel-gpu-resource-driver.fullimage" . }}
         imagePullPolicy: {{ .Values.gpu.image.pullPolicy }}
         command: ["/gpu-controller"]
         env:
