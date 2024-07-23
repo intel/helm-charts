@@ -75,5 +75,5 @@ app.kubernetes.io/name: {{ include "intel-gaudi-resource-driver.name" . }}
 {{- end }}
 
 {{- define "intel-gaudi-resource-driver.fullimage" -}}
-{{- printf "%s/%s:%s" .Values.gaudi.image.repository .Values.gaudi.image.name (default "latest" .Values.gaudi.image.tag) -}}
+{{- printf "%s/%s:%s" .Values.gaudi.image.repository .Values.gaudi.image.name .Values.gaudi.image.tag -}}
 {{- end }}
