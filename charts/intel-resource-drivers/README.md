@@ -7,6 +7,9 @@
 
 More info: [Intel Resource Drivers for Kubernetes](https://github.com/intel-innersource/containers.orchestrators.kubernetes.intel-resource-drivers-for-kubernetes)
 
+> [!Note] 
+> None of the resource drivers are installed by default. See the installation instructions and configuration.
+
 ## Get Helm Repository Info
 ```
 helm repo add intel https://intel.github.io/helm-charts/
@@ -40,10 +43,12 @@ You may also run `helm show values` on this chart's dependencies for additional 
 
 | Key | Type | Default |
 |-----|------|---------|
+| gpu.enabled | string | `false` |
 | gpu.image.repository | string | `intel` |
 | gpu.image.name | string | `"intel-gpu-resource-driver"` |
 | gpu.image.pullPolicy | string | `"IfNotPresent"` |
 | gpu.image.tag | string | `"v0.5.1"` |
+| gaudi.enabled | string | `false` |
 | gaudi.image.repository | string | `intel` |
 | gaudi.image.name | string | `"intel-gaudi-resource-driver"` |
 | gaudi.image.pullPolicy | string | `"IfNotPresent"` |

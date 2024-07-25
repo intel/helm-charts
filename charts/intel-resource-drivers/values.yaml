@@ -1,5 +1,5 @@
 gpu:
-  enabled: true
+  enabled: false
 
   fullnameOverride: ""
   nameOverride: ""
@@ -79,7 +79,7 @@ gpu:
     affinity: {}
 
 gaudi:
-  enabled: true
+  enabled: false
 
   fullnameOverride: ""
   nameOverride: ""
