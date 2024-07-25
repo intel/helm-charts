@@ -1,3 +1,4 @@
+{{- if .Values.gaudi.enabled }}
 apiVersion: resource.k8s.io/v1alpha2
 kind: ResourceClass
 metadata:
@@ -24,3 +25,4 @@ parametersRef:
   apiGroup: gaudi.resource.intel.com/v1alpha1
   kind: GaudiClassParameters
   name: intel-gaudi-monitor-params
+{{- end }}

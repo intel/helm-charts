@@ -1,4 +1,4 @@
-{{- if and .Values.gaudi.rbac.create }}
+{{- if and .Values.gaudi.enabled .Values.gaudi.rbac.create }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:

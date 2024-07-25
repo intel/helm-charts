@@ -1,4 +1,6 @@
+{{- if .Values.gpu.enabled }}
 apiVersion: v1
 kind: Namespace
 metadata:
   name: intel-gpu-resource-driver
+{{- end }}

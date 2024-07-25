@@ -1,4 +1,4 @@
-{{- if .Values.gpu.rbac.create }}
+{{- if and .Values.gpu.enabled .Values.gpu.rbac.create }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:

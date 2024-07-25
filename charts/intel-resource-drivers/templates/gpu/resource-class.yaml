@@ -1,4 +1,4 @@
----
+{{- if .Values.gpu.enabled }}
 apiVersion: resource.k8s.io/v1alpha2
 kind: ResourceClass
 metadata:
@@ -59,3 +59,4 @@ parametersRef:
   apiGroup: gpu.resource.intel.com/v1alpha2
   kind: GpuClassParameters
   name: intel-gpu-monitor-params
+{{- end }}

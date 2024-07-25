@@ -1,4 +1,6 @@
 gpu:
+  enabled: true
+
   fullnameOverride: ""
   nameOverride: ""
   namespaceOverride: "intel-gpu-resource-driver"
@@ -77,6 +79,8 @@ gpu:
     affinity: {}
 
 gaudi:
+  enabled: true
+
   fullnameOverride: ""
   nameOverride: ""
   namespaceOverride: "intel-gaudi-resource-driver"

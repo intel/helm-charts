@@ -1,4 +1,6 @@
+{{- if .Values.gaudi.enabled }}
 apiVersion: v1
 kind: Namespace
 metadata:
   name: intel-gaudi-resource-driver
+{{- end }}
