@@ -31,7 +31,15 @@ spec:
             fieldRef:
               fieldPath: metadata.namespace
         securityContext:
-          {{- toYaml .Values.kubeletPlugin.containers.init.securityContext | nindent 10 }}
+          privileged: false
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 10001
+          seccompProfile:
+            type: RuntimeDefault
       containers:
       - name: kubelet-plugin
         image: {{ include "intel-gpu-resource-driver.fullimage" . }}
@@ -68,7 +76,14 @@ spec:
         - name: sysfs
           mountPath: "/sysfs"
         securityContext:
-           {{- toYaml .Values.kubeletPlugin.containers.plugin.securityContext | nindent 10 }}
+          privileged: false
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
+          readOnlyRootFilesystem: true
+          runAsUser: 0
+          seccompProfile:
+            type: RuntimeDefault
       volumes:
       - name: plugins-registry
         hostPath:
@@ -131,7 +146,15 @@ spec:
             fieldRef:
               fieldPath: metadata.namespace
         securityContext:
-          {{- toYaml .Values.controller.containers.controller.securityContext | nindent 10 }}
+          privileged: false
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 10001
+          seccompProfile:
+            type: RuntimeDefault
       {{- with .Values.controller.tolerations }}
       tolerations:
         {{- toYaml . | nindent 8 }}
