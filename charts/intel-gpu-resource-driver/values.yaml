@@ -17,12 +17,6 @@ serviceAccount:
   name: "intel-gpu-resource-driver-service-account"
   automount: true
 
-rbac:
-  create: true
-  createAggregateClusterRoles: false
-  pspEnabled: false
-  pspUseAppArmor: false
-
 # Define Controller Part
 controller:
   podAnnotations: {}
