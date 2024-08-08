@@ -1,83 +1,40 @@
 # Default values for intel-gpu-resource-driver.
 nameOverride: ""
-namespaceOverride: ""
+namespaceOverride: "intel-gpu-resource-driver"
 fullnameOverride: ""
 selectorLabelsOverride: {}
-
 
 imagePullSecrets: []
 image:
   repository: intel
   name: intel-gpu-resource-driver
   pullPolicy: IfNotPresent
-  tag: "v0.4.0"
+  tag: "v0.5.1"
 
 serviceAccount:
   create: true
   annotations: {}
-  name: ""
+  name: "intel-gpu-resource-driver-service-account"
   automount: true
-
-rbac:
-    create: true
-    createAggregateClusterRoles: false
-    pspEnabled: false
-    pspUseAppArmor: false
-    #useExistingRole: ""
-    #useExistingClusterRole: intel-gpu-resource-driver-role
 
 # Define Controller Part
 controller:
   podAnnotations: {}
   tolerations:
-  - key: node-role.kubernetes.io/master
-    operator: Exists
-    effect: NoSchedule
-  - key: node-role.kubernetes.io/control-plane
-    operator: Exists
-    effect: NoSchedule
-  nodeSelector: {}
-      #node-role.kubernetes.io/control-plane: ""
+    - key: node-role.kubernetes.io/master
+      operator: Exists
+      effect: NoSchedule
+    - key: node-role.kubernetes.io/control-plane
+      operator: Exists
+      effect: NoSchedule
+  nodeSelector:
+    {}
+    #node-role.kubernetes.io/control-plane: ""
   affinity: {}
-  containers:
-    podAnnotations: {}
-    controller:
-      securityContext:
-        privileged: false
-        allowPrivilegeEscalation: false
-        capabilities:
-          drop: [ "ALL" ]
-        readOnlyRootFilesystem: true
-        runAsNonRoot: true
-        runAsUser: 10001
-        seccompProfile:
-          type: RuntimeDefault
 
 # Define Kubelet-Plugin Part
 kubeletPlugin:
   podAnnotations: {}
-  containers:
-    init:
-      securityContext:
-        privileged: false
-        allowPrivilegeEscalation: false
-        capabilities:
-          drop: [ "ALL" ]
-        readOnlyRootFilesystem: true
-        runAsNonRoot: true
-        runAsUser: 10001
-        seccompProfile:
-          type: RuntimeDefault
-    plugin:
-      securityContext:
-        privileged: false
-        allowPrivilegeEscalation: false
-        capabilities:
-          drop: [ "ALL" ]
-        readOnlyRootFilesystem: true
-        runAsUser: 0
-        seccompProfile:
-          type: RuntimeDefault
   tolerations: []
   nodeSelector: {}
   affinity: {}

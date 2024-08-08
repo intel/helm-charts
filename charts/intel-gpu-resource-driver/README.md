@@ -1,5 +1,12 @@
 # Dynamic Resource Allocation (DRA) Intel GPU Driver Helm Chart
 
+## The chart installs GPU resource driver:
+
+- [GPU](https://github.com/intel-innersource/containers.orchestrators.kubernetes.intel-resource-drivers-for-kubernetes/doc/gpu/README.md)
+
+More info: [Intel Resource Drivers for Kubernetes](https://github.com/intel-innersource/containers.orchestrators.kubernetes.intel-resource-drivers-for-kubernetes)
+
+
 ## Get Helm Repository Info
 ```
 helm repo add intel https://intel.github.io/helm-charts/
@@ -12,8 +19,7 @@ You can execute `helm search repo intel` command to see pulled charts [optional]
 CRDs of the GPU driver are installed as part of the chart first.
 
 ```
-helm install intel-gpu-resource-driver intel/intel-gpu-resource-driver \
---create-namespace --namespace intel-gpu-resource-driver
+helm install intel-gpu-resource-driver intel/intel-gpu-resource-driver
 ```
 ## Upgrade Chart
 ```
@@ -39,7 +45,7 @@ You may also run `helm show values` on this chart's dependencies for additional 
 | image.repository | string | `intel` |
 | image.name | string | `"intel-gpu-resource-driver"` |
 | image.pullPolicy | string | `"IfNotPresent"` |
-| image.tag | string | `"v0.4.0"` |
+| image.tag | string | `"v0.5.1"` |
 
 If you change the image tag to be used in Helm chart deployment, ensure that the version of the container image is consistent with CRDs and deployment YAMLs - they might change between releases.
 
