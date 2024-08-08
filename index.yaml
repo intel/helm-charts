@@ -786,6 +786,16 @@ entries:
   evi-test-tool:
   - apiVersion: v2
     appVersion: 1.16.0
+    created: "2024-06-04T06:46:36.341792235Z"
+    description: A Helm chart for Kubernetes
+    digest: b35565d9c89c74a0d45a4fc2e3a9d42294ae9224e39e153f498aa79965ccf9ff
+    name: evi-test-tool
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/evi-test-tool-3.0.0/evi-test-tool-3.0.0.tgz
+    version: 3.0.0
+  - apiVersion: v2
+    appVersion: 1.16.0
     created: "2024-03-05T02:01:38.762691114Z"
     description: A Helm chart for Kubernetes
     digest: 1170f6563c9a9e9abe67280bdb8bf5780e094f2e26ad7e7e8b58f7c7947781ec
@@ -834,16 +844,6 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/evi-test-tool-0.8.0/evi-test-tool-0.8.0.tgz
     version: 0.8.0
-  - apiVersion: v2
-    appVersion: 1.16.0
-    created: "2024-06-04T06:46:36.341792235Z"
-    description: A Helm chart for Kubernetes
-    digest: b35565d9c89c74a0d45a4fc2e3a9d42294ae9224e39e153f498aa79965ccf9ff
-    name: evi-test-tool
-    type: application
-    urls:
-    - https://github.com/intel/helm-charts/releases/download/evi-test-tool-3.0.0/evi-test-tool-3.0.0.tgz
-    version: 3.0.0
   evi-vault:
   - apiVersion: v2
     appVersion: 1.12.1
@@ -1785,6 +1785,17 @@ entries:
     version: 0.24.0
   intel-gpu-resource-driver:
   - apiVersion: v2
+    appVersion: v0.5.1
+    created: "2024-08-08T07:41:47.915389714Z"
+    description: A Helm chart for a Dynamic Resource Allocation (DRA) Intel GPU Resource
+      Driver
+    digest: d426ddc747b18c7ef8f9a17675d01ef75a76578c2d94231d435afee752894088
+    name: intel-gpu-resource-driver
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/intel-gpu-resource-driver-0.5.1/intel-gpu-resource-driver-0.5.1.tgz
+    version: 0.5.1
+  - apiVersion: v2
     appVersion: v0.4.0
     created: "2024-04-29T15:10:54.402706587Z"
     description: A Helm chart for a Dynamic Resource Allocation (DRA) Intel GPU Resource
@@ -2271,4 +2282,4 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/vault-0.8.0/vault-0.8.0.tgz
     version: 0.8.0
-generated: "2024-06-04T06:46:36.342104619Z"
+generated: "2024-08-08T07:41:47.915840755Z"
