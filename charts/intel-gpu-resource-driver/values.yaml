@@ -12,7 +12,6 @@ image:
   tag: "v0.5.1"
 
 serviceAccount:
-  create: true
   annotations: {}
   name: "intel-gpu-resource-driver-service-account"
   automount: true
