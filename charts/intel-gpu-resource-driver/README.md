@@ -2,9 +2,9 @@
 
 ## The chart installs GPU resource driver:
 
-- [GPU](https://github.com/intel-innersource/containers.orchestrators.kubernetes.intel-resource-drivers-for-kubernetes/doc/gpu/README.md)
+- [GPU](https://github.com/intel/intel-resource-drivers-for-kubernetes/tree/main/doc/gpu/README.md)
 
-More info: [Intel Resource Drivers for Kubernetes](https://github.com/intel-innersource/containers.orchestrators.kubernetes.intel-resource-drivers-for-kubernetes)
+More info: [Intel Resource Drivers for Kubernetes](https://github.com/intel/intel-resource-drivers-for-kubernetes/tree/main)
 
 
 ## Get Helm Repository Info
