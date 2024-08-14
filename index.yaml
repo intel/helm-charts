@@ -1783,6 +1783,18 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/intel-device-plugins-sgx-0.24.0/intel-device-plugins-sgx-0.24.0.tgz
     version: 0.24.0
+  intel-gaudi-resource-driver:
+  - apiVersion: v2
+    appVersion: v0.1.1
+    created: "2024-08-14T08:17:41.771319492Z"
+    description: A Helm chart for a Dynamic Resource Allocation (DRA) Intel Gaudi
+      Resource Driver
+    digest: 9cbd3dfb640b6becc7481fbbe58e913a642c94cb4ebf4afb349106ecd188cb7e
+    name: intel-gaudi-resource-driver
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/intel-gaudi-resource-driver-0.1.1/intel-gaudi-resource-driver-0.1.1.tgz
+    version: 0.1.1
   intel-gpu-resource-driver:
   - apiVersion: v2
     appVersion: v0.5.1
@@ -2282,4 +2294,4 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/vault-0.8.0/vault-0.8.0.tgz
     version: 0.8.0
-generated: "2024-08-08T07:41:47.915840755Z"
+generated: "2024-08-14T08:17:41.891104002Z"
