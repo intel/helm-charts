@@ -1,0 +1,39 @@
+# Default values for intel-gaudi-resource-driver.
+nameOverride: ""
+namespaceOverride: "intel-gaudi-resource-driver"
+fullnameOverride: ""
+selectorLabelsOverride: {}
+
+imagePullSecrets: []
+image:
+  repository: intel
+  name: intel-gaudi-resource-driver
+  pullPolicy: IfNotPresent
+  tag: "v0.1.1"
+
+serviceAccount:
+  annotations: {}
+  name: "intel-gaudi-resource-driver-service-account"
+  automount: true
+
+# Define Controller Part
+controller:
+  podAnnotations: {}
+  tolerations:
+    - key: node-role.kubernetes.io/master
+      operator: Exists
+      effect: NoSchedule
+    - key: node-role.kubernetes.io/control-plane
+      operator: Exists
+      effect: NoSchedule
+  nodeSelector:
+    {}
+    #node-role.kubernetes.io/control-plane: ""
+  affinity: {}
+
+# Define Kubelet-Plugin Part
+kubeletPlugin:
+  podAnnotations: {}
+  tolerations: []
+  nodeSelector: {}
+  affinity: {}
