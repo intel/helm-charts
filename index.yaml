@@ -981,6 +981,16 @@ entries:
   evi-task-manager:
   - apiVersion: v2
     appVersion: 1.16.0
+    created: "2024-08-16T05:18:20.642947604Z"
+    description: A Helm chart for Kubernetes
+    digest: 8fdb51facdecb554538d9918d9804507e98c8d694da121d4af7d1096eb60541f
+    name: evi-task-manager
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/evi-task-manager-3.0.3/evi-task-manager-3.0.3.tgz
+    version: 3.0.3
+  - apiVersion: v2
+    appVersion: 1.16.0
     created: "2024-06-04T06:35:00.099282582Z"
     description: A Helm chart for Kubernetes
     digest: d43b65ad10011fd28a04090564d008509d3194453ee349b2a4a6f65859508a4a
