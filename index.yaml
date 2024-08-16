@@ -173,6 +173,16 @@ entries:
   evi-ai-structuring:
   - apiVersion: v2
     appVersion: 1.16.0
+    created: "2024-08-16T06:03:15.107544918Z"
+    description: A Helm chart for Kubernetes
+    digest: a259dbdca1900c7577fa79985d1c80558f668ea3bf291530d69eb78f29a6c709
+    name: evi-ai-structuring
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/evi-ai-structuring-3.0.3/evi-ai-structuring-3.0.3.tgz
+    version: 3.0.3
+  - apiVersion: v2
+    appVersion: 1.16.0
     created: "2024-06-04T06:33:17.271986579Z"
     description: A Helm chart for Kubernetes
     digest: f1b245f587f5c63b4821d85b4c359c8a4e2b849223c1ec82be7357419d086c6e
@@ -2400,4 +2410,4 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/vault-0.8.0/vault-0.8.0.tgz
     version: 0.8.0
-generated: "2024-08-16T06:03:01.451011224Z"
+generated: "2024-08-16T06:03:15.108041091Z"
