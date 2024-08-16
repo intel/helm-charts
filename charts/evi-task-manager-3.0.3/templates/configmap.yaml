@@ -1,0 +1,273 @@
+# INTEL CONFIDENTIAL
+#
+# Copyright (C) 2022 Intel Corporation.
+#
+# This software and the related documents are Intel copyrighted materials, and your use of
+# them is governed by the express license under which they were provided to you (License).
+# Unless the License provides otherwise, you may not use, modify, copy, publish, distribute,
+# disclose or transmit this software or the related documents without Intel's prior written permission.
+#
+# This software and the related documents are provided as is, with no express or implied warranties,
+# other than those that are expressly stated in the License.
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: {{ .Values.namespace.value }}
+  name: {{ .Values.configMap.name }}
+data:
+  app.config: |
+    AI_SERVICE = "{{ .Values.configMap.aiInference.addr }}"
+    AI_PORT = "{{ .Values.configMap.aiInference.port }}"
+    STORAGE_SERVICE = "{{ .Values.configMap.storageRest.addr }}"
+    STORAGE_PORT = "{{ .Values.configMap.storageRest.port }}"
+    RTSP_SERVICE = "{{ .Values.configMap.rtspService.addr }}"
+    RTSP_PORT = "{{ .Values.configMap.rtspService.port }}"
+    RTSP_SERVICE_COUNT = "{{ .Values.configMap.rtspServiceCount }}"
+    CLUSTER_SERVICE =  "{{ .Values.configMap.clusterService.addr }}"
+    CLUSTER_PORT =   "{{ .Values.configMap.clusterService.port }}"
+    USING_CPU = "{{ .Values.configMap.useCPU}}"
+    CLUSTERING_MINI_DURATION = "{{ .Values.configMap.clusteringMiniDuration }}"
+  ai_workload_gpu.json: |
+    {
+        "Nodes": [
+            {
+                "Node Class Name": "StorageStreamVideoInputNode",
+                "Node Name": "Input",
+                "Thread Number": "1",
+                "Is Source Node": "true",
+                "Configure String": "QueryNum=(INT)3"
+            },
+            {
+                "Node Class Name": "VideoDemuxerNode",
+                "Node Name": "Demuxer",
+                "Thread Number": "1",
+                "Is Source Node": "false",
+                "Configure String": "ReadLength=(INT)32768000"
+            },
+            {
+                "Node Class Name": "VPLDecoderNode",
+                "Node Name": "Decoder",
+                "Thread Number": "1",
+                "Is Source Node": "false",
+                "Configure String": "Device=(STRING)GPU.0;BufferType=(STRING)mfxFrame"
+            },
+            {
+                "Node Class Name": "DetectionNode",
+                "Node Name": "Detection",
+                "Thread Number": "1",
+                "Is Source Node": "false",
+                "Configure String": "InferenceInterval=(INT)24;Device=(STRING)GPU.0;PreProcessType=(STRING)vaapi-surface-sharing;InferReqNumber=(INT)6;InferConfig=(STRING_ARRAY)[GPU_THROUGHPUT_STREAMS=6];PreProcessConfig=(STRING_ARRAY)[VAAPI_THREAD_POOL_SIZE=6,VAAPI_FAST_SCALE_LOAD_FACTOR=0];InferBatchSize=(INT)1;ModelPath=(STRING)vehicle-detection-evi-0.0.1/FP16-INT8/vehicle-detection-evi-001.xml;ModelProcConfPath=(STRING)vehicle-detection-evi-0.0.1/vehicle-detection-evi-001.model_proc.json;Threshold=(FLOAT)0.6;MaxROI=(INT)0"
+            },
+            {
+                "Node Class Name": "TrackerNode_CPU",
+                "Node Name": "Tracker",
+                "Thread Number": "1",
+                "Is Source Node": "false",
+                "Configure String": "TrackerType=(STRING)zero_term_imageless"
+            },
+            {
+                "Node Class Name": "StorageImageUploadNode",
+                "Node Name": "UploadImage",
+                "Thread Number": "1",
+                "Is Source Node": "false",
+                "Configure String": "MediaType=(STRING)video;DataSource=(STRING)vehicle"
+            },
+            {
+                "Node Class Name": "ClassificationNode",
+                "Node Name": "Attribute",
+                "Thread Number": "1",
+                "Is Source Node": "false",
+                "Configure String": "Device=(STRING)GPU.0;InferBatchSize=(INT)1;InferReqNumber=(INT)6;InferConfig=(STRING_ARRAY)[GPU_THROUGHPUT_STREAMS=6];PreProcessType=(STRING)vaapi-surface-sharing;PreProcessConfig=(STRING_ARRAY)[VAAPI_THREAD_POOL_SIZE=6,VAAPI_FAST_SCALE_LOAD_FACTOR=0];ModelPath=(STRING)vehicle-attributes-recognition-barrier-0039/FP16-INT8/vehicle-attributes-recognition-barrier-0039.xml;ModelProcConfPath=(STRING)vehicle-attributes-recognition-barrier-0039/vehicle-attributes-recognition-barrier-0039.model_proc.json"
+            },
+            {
+                "Node Class Name": "FeatureExtractionNode",
+                "Node Name": "FeatureExtraction",
+                "Thread Number": "1",
+                "Is Source Node": "false",
+                "Configure String": "Device=(STRING)GPU.0;InferBatchSize=(INT)1;InferReqNumber=(INT)6;InferConfig=(STRING_ARRAY)[GPU_THROUGHPUT_STREAMS=6];PreProcessType=(STRING)vaapi-surface-sharing;PreProcessConfig=(STRING_ARRAY)[VAAPI_THREAD_POOL_SIZE=6,VAAPI_FAST_SCALE_LOAD_FACTOR=0];ModelPath=(STRING)fe-pytorch-0.0.1/INT8/fe-pytorch-0.0.1.xml;ModelProcConfPath=(STRING)fe-pytorch-0.0.1/fe-pytorch-0.0.1.model_proc.json"
+            },
+            {
+                "Node Class Name": "LLResultSinkStreamNode",
+                "Node Name": "Output",
+                "Thread Number": "1",
+                "Is Source Node": "false",
+                "Configure String": ""
+            }
+        ],
+        "Links": [
+            {
+                "Previous Node": "Input",
+                "Previous Node Port": "0",
+                "Next Node": "Demuxer",
+                "Next Node Port": "0"
+            },
+            {
+                "Previous Node": "Demuxer",
+                "Previous Node Port": "0",
+                "Next Node": "Decoder",
+                "Next Node Port": "0"
+            },
+            {
+                "Previous Node": "Decoder",
+                "Previous Node Port": "0",
+                "Next Node": "Detection",
+                "Next Node Port": "0"
+            },
+            {
+                "Previous Node": "Detection",
+                "Previous Node Port": "0",
+                "Next Node": "Tracker",
+                "Next Node Port": "0"
+            },
+            {
+                "Previous Node": "Tracker",
+                "Previous Node Port": "0",
+                "Next Node": "UploadImage",
+                "Next Node Port": "0"
+            },
+            {
+                "Previous Node": "UploadImage",
+                "Previous Node Port": "0",
+                "Next Node": "Attribute",
+                "Next Node Port": "0"
+            },
+            {
+                "Previous Node": "Attribute",
+                "Previous Node Port": "0",
+                "Next Node": "FeatureExtraction",
+                "Next Node Port": "0"
+            },
+            {
+                "Previous Node": "FeatureExtraction",
+                "Previous Node Port": "0",
+                "Next Node": "Output",
+                "Next Node Port": "0"
+            }
+        ]
+    }
+  ai_workload.json: |
+    {
+        "Nodes": [
+            {
+                "Node Class Name": "StorageStreamVideoInputNode",
+                "Node Name": "Input",
+                "Thread Number": "1",
+                "Is Source Node": "true",
+                "Configure String": "QueryNum=(INT)3"
+            },
+            {
+                "Node Class Name": "VideoDemuxerNode",
+                "Node Name": "Demuxer",
+                "Thread Number": "1",
+                "Is Source Node": "false",
+                "Configure String": "ReadLength=(INT)32768000"
+            },
+            {
+                "Node Class Name": "VideoDecoderNode",
+                "Node Name": "Decoder",
+                "Thread Number": "1",
+                "Is Source Node": "false"
+            },
+            {
+                "Node Class Name": "DetectionNode",
+                "Node Name": "Detection",
+                "Thread Number": "1",
+                "Is Source Node": "false",
+                "Configure String": "InferenceInterval=(INT)24;InferReqNumber=(INT)6;InferConfig=(STRING_ARRAY)[CPU_THROUGHPUT_STREAMS=6,CPU_THREADS_NUM=6,CPU_BIND_THREAD=NUMA];InferBatchSize=(INT)1;ModelPath=(STRING)vehicle-detection-evi-0.0.1/FP16-INT8/vehicle-detection-evi-001.xml;ModelProcConfPath=(STRING)vehicle-detection-evi-0.0.1/vehicle-detection-evi-001.model_proc.json;Threshold=(FLOAT)0.6;MaxROI=(INT)0"
+            },
+            {
+                "Node Class Name": "TrackerNode_CPU",
+                "Node Name": "Tracker",
+                "Thread Number": "1",
+                "Is Source Node": "false",
+                "Configure String": "TrackerType=(STRING)zero_term_imageless"
+            },
+            {
+                "Node Class Name": "StorageImageUploadNode",
+                "Node Name": "UploadImage",
+                "Thread Number": "1",
+                "Is Source Node": "false",
+                "Configure String": "MediaType=(STRING)video;DataSource=(STRING)vehicle"
+            },
+            {
+                "Node Class Name": "ClassificationNode",
+                "Node Name": "Attribute",
+                "Thread Number": "1",
+                "Is Source Node": "false",
+                "Configure String": "InferReqNumber=(INT)6;InferConfig=(STRING_ARRAY)[CPU_THROUGHPUT_STREAMS=6,CPU_THREADS_NUM=6,CPU_BIND_THREAD=NUMA];ModelPath=(STRING)vehicle-attributes-recognition-barrier-0039/FP16-INT8/vehicle-attributes-recognition-barrier-0039.xml;ModelProcConfPath=(STRING)vehicle-attributes-recognition-barrier-0039/vehicle-attributes-recognition-barrier-0039.model_proc.json"
+            },
+            {
+                "Node Class Name": "FeatureExtractionNode",
+                "Node Name": "FeatureExtraction",
+                "Thread Number": "1",
+                "Is Source Node": "false",
+                "Configure String": "InferReqNumber=(INT)6;InferConfig=(STRING_ARRAY)[CPU_THROUGHPUT_STREAMS=6,CPU_THREADS_NUM=6,CPU_BIND_THREAD=NUMA];PreProcessType=(STRING)opencv;ModelPath=(STRING)fe-pytorch-0.0.1/INT8/fe-pytorch-0.0.1.xml;ModelProcConfPath=(STRING)fe-pytorch-0.0.1/fe-pytorch-0.0.1.model_proc.json"
+            },
+            {
+                "Node Class Name": "LLResultSinkStreamNode",
+                "Node Name": "Output",
+                "Thread Number": "1",
+                "Is Source Node": "false",
+                "Configure String": ""
+            }
+        ],
+        "Links": [
+            {
+                "Previous Node": "Input",
+                "Previous Node Port": "0",
+                "Next Node": "Demuxer",
+                "Next Node Port": "0",
+                "Queue Size": "16"
+            },
+            {
+                "Previous Node": "Demuxer",
+                "Previous Node Port": "0",
+                "Next Node": "Decoder",
+                "Next Node Port": "0",
+                "Queue Size": "16"
+            },
+            {
+                "Previous Node": "Decoder",
+                "Previous Node Port": "0",
+                "Next Node": "Detection",
+                "Next Node Port": "0",
+                "Queue Size": "16"
+            },
+            {
+                "Previous Node": "Detection",
+                "Previous Node Port": "0",
+                "Next Node": "Tracker",
+                "Next Node Port": "0",
+                "Queue Size": "16"
+            },
+            {
+                "Previous Node": "Tracker",
+                "Previous Node Port": "0",
+                "Next Node": "UploadImage",
+                "Next Node Port": "0",
+                "Queue Size": "16"
+            },
+            {
+                "Previous Node": "UploadImage",
+                "Previous Node Port": "0",
+                "Next Node": "Attribute",
+                "Next Node Port": "0"
+            },
+            {
+                "Previous Node": "Attribute",
+                "Previous Node Port": "0",
+                "Next Node": "FeatureExtraction",
+                "Next Node Port": "0",
+                "Queue Size": "16"
+            },
+            {
+                "Previous Node": "FeatureExtraction",
+                "Previous Node Port": "0",
+                "Next Node": "Output",
+                "Next Node Port": "0",
+                "Queue Size": "256"
+            }
+        ]
+    }
