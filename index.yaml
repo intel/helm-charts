@@ -599,6 +599,23 @@ entries:
   evi-keycloak:
   - apiVersion: v2
     appVersion: 21.0.2
+    created: "2024-08-16T06:39:38.590851995Z"
+    dependencies:
+    - condition: keycloak.enabled
+      name: keycloak
+      repository: https://charts.bitnami.com/bitnami
+      tags:
+      - keycloak
+      version: 14.2.0
+    description: A Helm chart for Kubernetes
+    digest: 3e058dd971c26cd9065278ec87c09e11cb5d67990ebafe0844d0bdac8cd2b32a
+    name: evi-keycloak
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/evi-keycloak-3.0.3/evi-keycloak-3.0.3.tgz
+    version: 3.0.3
+  - apiVersion: v2
+    appVersion: 21.0.2
     created: "2024-06-04T06:33:57.471537098Z"
     dependencies:
     - condition: keycloak.enabled
@@ -2486,4 +2503,4 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/vault-0.8.0/vault-0.8.0.tgz
     version: 0.8.0
-generated: "2024-08-16T06:35:06.954560883Z"
+generated: "2024-08-16T06:39:38.591296777Z"
