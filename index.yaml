@@ -506,6 +506,23 @@ entries:
   evi-hbase:
   - apiVersion: v2
     appVersion: 1.16.0
+    created: "2024-08-16T07:00:24.973101901Z"
+    dependencies:
+    - condition: hbase.enabled
+      name: hbase
+      repository: https://itboy87.github.io/bigdata-charts/
+      tags:
+      - hbase
+      version: 0.1.7
+    description: A Helm chart for Kubernetes
+    digest: 40489507977f4e8429bf3ec8b6aa96fc19545153284dca6e0adcba066003c1a5
+    name: evi-hbase
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/evi-hbase-3.0.3/evi-hbase-3.0.3.tgz
+    version: 3.0.3
+  - apiVersion: v2
+    appVersion: 1.16.0
     created: "2024-06-04T06:27:36.341792235Z"
     dependencies:
     - condition: hbase.enabled
@@ -2539,4 +2556,4 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/vault-0.8.0/vault-0.8.0.tgz
     version: 0.8.0
-generated: "2024-08-16T06:58:27.272256399Z"
+generated: "2024-08-16T07:00:24.974310813Z"
