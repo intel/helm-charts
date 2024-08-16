@@ -214,6 +214,16 @@ entries:
   evi-clustering-archiving:
   - apiVersion: v2
     appVersion: 1.16.0
+    created: "2024-08-16T06:30:23.845524041Z"
+    description: A Helm chart for Kubernetes
+    digest: 9b8003c76d9d9422733b42a1072d3d1a8933020f363932c6f6ac554d3a5a844d
+    name: evi-clustering-archiving
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/evi-clustering-archiving-3.0.3/evi-clustering-archiving-3.0.3.tgz
+    version: 3.0.3
+  - apiVersion: v2
+    appVersion: 1.16.0
     created: "2024-04-06T01:56:24.786042681Z"
     description: A Helm chart for Kubernetes
     digest: 7595e7af7c2451effd3147b69564220acfa1fcc00d8041c1e0da2a7f6d2fbf87
@@ -2466,4 +2476,4 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/vault-0.8.0/vault-0.8.0.tgz
     version: 0.8.0
-generated: "2024-08-16T06:24:52.856818045Z"
+generated: "2024-08-16T06:30:23.84628943Z"
