@@ -2093,6 +2093,16 @@ entries:
   its-search-image-by-image:
   - apiVersion: v2
     appVersion: 1.16.0
+    created: "2024-08-16T06:24:52.856372452Z"
+    description: A Helm chart for Kubernetes
+    digest: 274d28b16ee78d8bc298a75d2c3b6405dc1157ef94ed9b0f4a40b0b2aff65d9b
+    name: its-search-image-by-image
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/its-search-image-by-image-3.0.3/its-search-image-by-image-3.0.3.tgz
+    version: 3.0.3
+  - apiVersion: v2
+    appVersion: 1.16.0
     created: "2024-06-04T06:36:17.584461176Z"
     description: A Helm chart for Kubernetes
     digest: 5a6391308bda6613980df030cc394a6cea59c361b3c81055a20f572c5e5a11bc
@@ -2456,4 +2466,4 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/vault-0.8.0/vault-0.8.0.tgz
     version: 0.8.0
-generated: "2024-08-16T06:05:05.426526996Z"
+generated: "2024-08-16T06:24:52.856818045Z"
