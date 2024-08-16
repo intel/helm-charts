@@ -800,6 +800,22 @@ entries:
   evi-redis:
   - apiVersion: v2
     appVersion: 7.0.10
+    created: "2024-08-16T06:04:22.750475204Z"
+    dependencies:
+    - name: redis
+      repository: https://charts.bitnami.com/bitnami
+      tags:
+      - redis
+      version: 17.9.3
+    description: A Helm chart for Kubernetes
+    digest: 9cbdee0f0754c94d67f45e7f4f16693e2ac84dfd8fe4a89b0d1653efe63ab076
+    name: evi-redis
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/evi-redis-3.0.3/evi-redis-3.0.3.tgz
+    version: 3.0.3
+  - apiVersion: v2
+    appVersion: 7.0.10
     created: "2024-06-04T06:34:38.423577383Z"
     dependencies:
     - name: redis
@@ -2430,4 +2446,4 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/vault-0.8.0/vault-0.8.0.tgz
     version: 0.8.0
-generated: "2024-08-16T06:03:58.095527237Z"
+generated: "2024-08-16T06:04:22.750804799Z"
