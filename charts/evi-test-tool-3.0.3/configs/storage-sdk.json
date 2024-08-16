@@ -1,0 +1,30 @@
+{
+    "version": 1,
+    "name": "row data source",
+    "video_image": {
+        "address": "evi-minio-service",
+        "port": "9000",
+        "rootUser": "/opt/evi_test_tool/credential/minio/rootUser",
+        "rootPassword": "/opt/evi_test_tool/credential/minio/rootPassword"
+    },
+    "video_image_attributes": {
+        "flask_server_address": "evi-storage-rest",
+        "flask_server_port": "9900",
+        "prefix": "v1",
+        "media": "/media"
+    },
+    "mediatype": [
+        "image",
+        "video"
+    ],
+    "datasource": [
+        "person",
+        "vehicle"
+    ],
+    "psql": {
+        "host": "evi-postgresql",
+        "port": "5432",
+        "user": "hce",
+        "database": "hce"
+    }
+}
