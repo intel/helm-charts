@@ -598,6 +598,21 @@ entries:
   evi-minio:
   - apiVersion: v2
     appVersion: 5.0.7
+    created: "2024-08-16T05:58:42.638308487Z"
+    dependencies:
+    - name: minio
+      repository: https://charts.min.io/
+      tags:
+      - minio
+      version: 5.0.7
+    description: A Helm chart for Kubernetes
+    digest: 331e6fdba0b596989211c0bdf12829acb50af144ecc800ffe5e9497b1922cff5
+    name: evi-minio
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/evi-minio-3.0.3/evi-minio-3.0.3.tgz
+    version: 3.0.3
+  - apiVersion: v2
+    appVersion: 5.0.7
     created: "2024-06-04T06:34:15.274373313Z"
     dependencies:
     - name: minio
@@ -2330,4 +2345,4 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/vault-0.8.0/vault-0.8.0.tgz
     version: 0.8.0
-generated: "2024-08-16T05:58:26.699157062Z"
+generated: "2024-08-16T05:58:42.638668972Z"
