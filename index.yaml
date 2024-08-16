@@ -101,6 +101,16 @@ entries:
   evi-ai-inference:
   - apiVersion: v2
     appVersion: 1.16.0
+    created: "2024-08-16T05:18:20.642946704Z"
+    description: A Helm chart for Kubernetes
+    digest: d38a741c2b75fb744cc5ab8eb0732bd4179ea1a459def43d59444b24ce82c892
+    name: evi-ai-inference
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/evi-ai-inference-3.0.3/evi-ai-inference-3.0.3.tgz
+    version: 3.0.3
+  - apiVersion: v2
+    appVersion: 1.16.0
     created: "2024-06-04T03:41:36.296353788Z"
     description: A Helm chart for Kubernetes
     digest: b604dd3d7a8e9cc6a029e1633e7402c571e2588b73330b084f516242678e0b21
@@ -2294,4 +2304,4 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/vault-0.8.0/vault-0.8.0.tgz
     version: 0.8.0
-generated: "2024-08-14T08:17:41.891104002Z"
+generated: "2024-08-16T05:18:20.643330239Z"
