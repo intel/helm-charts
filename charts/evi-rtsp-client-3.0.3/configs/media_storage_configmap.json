@@ -1,0 +1,26 @@
+{
+    "version": 1,
+    "name": "row data source",
+    "video_image": {
+        "address": "minIOAddress_placeholder",
+        "port": "minIOPort_placeholder",
+        "rootUser": "rootUserPath_placeholder",
+        "rootPassword": "rootPasswordPath_placeholder"
+    },
+    "video_image_attributes": {
+        "flask_server_address": "storageRestAddress_placeholder",
+        "flask_server_port": "storageRestPort_placeholder",
+        "prefix": "v1",
+        "media": "/media",
+        "stream": "/insert/stream"
+    },
+    "mediatype": [
+        "image",
+        "video"
+    ],
+    "datasource": [
+        "person",
+        "vehicle"
+    ]
+}
+

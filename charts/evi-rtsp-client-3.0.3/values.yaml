@@ -1,0 +1,80 @@
+# INTEL CONFIDENTIAL
+#
+# Copyright (C) 2024 Intel Corporation.
+#
+# This software and the related documents are Intel copyrighted materials, and your use of
+# them is governed by the express license under which they were provided to you (License).
+# Unless the License provides otherwise, you may not use, modify, copy, publish, distribute,
+# disclose or transmit this software or the related documents without Intel's prior written permission.
+#
+# This software and the related documents are provided as is, with no express or implied warranties,
+# other than those that are expressly stated in the License.
+
+---
+# Default values for rtsp-client
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+global:
+  namespace:
+    create: false
+    value: smartedge-apps
+    istioInjection:
+      create: false
+  service:
+    name: evi-rtsp-client
+  deployment:
+    name: evi-rtsp-client
+  secret:
+    minio:
+      name: evi-minio
+
+istioInjection: false
+replicaCount: 1
+
+image:
+  repository: evi-rtsp-client
+  version: latest
+  pullPolicy: IfNotPresent
+  restfulPort: 9800
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 500Mi
+  limits:
+    cpu: 10
+    memory: 16Gi
+
+environment:
+  HVA_NODE_DIR_PATH: /opt/rtsp_client/libs
+
+configMap:
+  rootPath:
+    value: /opt/rtsp_client/
+  rtspClient:
+    name: rtsp-client-pipline
+    value: configs/pipeline_rtsp.json
+    relativePathInContainer: configuration/pipeline_rtsp.json
+    splitDuration: 3
+  mediaStorage:
+    name: rtsp-media-storage
+    value: configs/media_storage_configmap.json
+    relativePathInContainer: 3rdParty/media_storage/media_storage_configmap.json
+    rootUser: ""
+    rootPassword: ""
+    secretMountPath: /opt/rtsp_client/credentials/minio
+    rootUserMountPath: /opt/rtsp_client/credentials/minio/rootUser
+    rootPasswordMountPath: /opt/rtsp_client/credentials/minio/rootPassword
+    minIOAddress: "minio-service.minio"
+    minIOPort: "9000"
+  database:
+    storageRestAddress: "storage-rest.storage-rest"
+    storageRestPort: "9900"
+
+secret:
+  camera:
+    name: ip-camera
+    path: credential/cameraSecrets.json
+    secretMountPath: /opt/rtsp_client/credentials/camera
+
