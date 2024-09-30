@@ -57,6 +57,13 @@ rules:
 - apiGroups:
   - ""
   resources:
+  - nodes/proxy
+  verbs:
+  - get
+  - list
+- apiGroups:
+  - ""
+  resources:
   - pods
   verbs:
   - get
@@ -103,155 +110,11 @@ rules:
   - deviceplugin.intel.com
   resources:
   - dlbdeviceplugins
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - deviceplugin.intel.com
-  resources:
-  - dlbdeviceplugins/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - deviceplugin.intel.com
-  resources:
-  - dlbdeviceplugins/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - deviceplugin.intel.com
-  resources:
   - dsadeviceplugins
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - deviceplugin.intel.com
-  resources:
-  - dsadeviceplugins/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - deviceplugin.intel.com
-  resources:
-  - dsadeviceplugins/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - deviceplugin.intel.com
-  resources:
   - fpgadeviceplugins
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - deviceplugin.intel.com
-  resources:
-  - fpgadeviceplugins/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - deviceplugin.intel.com
-  resources:
-  - fpgadeviceplugins/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - deviceplugin.intel.com
-  resources:
   - gpudeviceplugins
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - deviceplugin.intel.com
-  resources:
-  - gpudeviceplugins/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - deviceplugin.intel.com
-  resources:
-  - gpudeviceplugins/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - deviceplugin.intel.com
-  resources:
   - iaadeviceplugins
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - deviceplugin.intel.com
-  resources:
-  - iaadeviceplugins/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - deviceplugin.intel.com
-  resources:
   - qatdeviceplugins
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - deviceplugin.intel.com
-  resources:
-  - qatdeviceplugins/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - deviceplugin.intel.com
-  resources:
-  - qatdeviceplugins/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - deviceplugin.intel.com
-  resources:
   - sgxdeviceplugins
   verbs:
   - create
@@ -264,12 +127,24 @@ rules:
 - apiGroups:
   - deviceplugin.intel.com
   resources:
+  - dlbdeviceplugins/finalizers
+  - dsadeviceplugins/finalizers
+  - fpgadeviceplugins/finalizers
+  - gpudeviceplugins/finalizers
+  - iaadeviceplugins/finalizers
+  - qatdeviceplugins/finalizers
   - sgxdeviceplugins/finalizers
   verbs:
   - update
 - apiGroups:
   - deviceplugin.intel.com
   resources:
+  - dlbdeviceplugins/status
+  - dsadeviceplugins/status
+  - fpgadeviceplugins/status
+  - gpudeviceplugins/status
+  - iaadeviceplugins/status
+  - qatdeviceplugins/status
   - sgxdeviceplugins/status
   verbs:
   - get
@@ -469,7 +344,7 @@ spec:
         - --secure-listen-address=0.0.0.0:8443
         - --upstream=http://127.0.0.1:8080/
         - --logtostderr=true
-        - --tls-cipher-suites=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305
+        - --tls-cipher-suites=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
         - --v=10
         image: "{{ .Values.kubeRbacProxy.image.hub }}/{{ .Values.kubeRbacProxy.image.hubRepo }}/kube-rbac-proxy:{{ .Values.kubeRbacProxy.image.tag }}"
         name: kube-rbac-proxy

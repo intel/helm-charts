@@ -9,9 +9,9 @@ manager:
 
 kubeRbacProxy:
   image:
-    hub: gcr.io
-    hubRepo: kubebuilder
-    tag: v0.16.0
+    hub: quay.io
+    hubRepo: brancz
+    tag: v0.18.1
     pullPolicy: IfNotPresent
 
 privateRegistry:
