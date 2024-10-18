@@ -1,0 +1,11 @@
+apiVersion: v2
+appVersion: 1.16.0
+description: A Rust, Python and gRPC server for text generation inference by huggingface
+  on Intel GPUs.
+maintainers:
+- email: tyler.titsworth@intel.com
+  name: tylertitsworth
+  url: https://github.com/tylertitsworth
+name: text-generation-inference
+type: application
+version: 0.2.1
