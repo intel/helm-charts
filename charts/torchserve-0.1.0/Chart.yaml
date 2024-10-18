@@ -1,0 +1,11 @@
+apiVersion: v2
+appVersion: 1.16.0
+description: TorchServe is a performant, flexible and easy to use tool for serving
+  PyTorch models in production on Intel GPUs.
+maintainers:
+- email: tyler.titsworth@intel.com
+  name: tylertitsworth
+  url: https://github.com/tylertitsworth
+name: torchserve
+type: application
+version: 0.1.0
