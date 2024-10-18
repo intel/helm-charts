@@ -1,0 +1,15 @@
+apiVersion: v2
+appVersion: 1.16.0
+description: TensorFlow Serving is a flexible, high-performance serving system for
+  machine learning models, designed for production environments. TensorFlow Serving
+  makes it easy to deploy new algorithms and experiments, while keeping the same server
+  architecture and APIs. TensorFlow Serving provides out-of-the-box integration with
+  TensorFlow models, but can be easily extended to serve other types of models and
+  data.
+maintainers:
+- email: tyler.titsworth@intel.com
+  name: tylertitsworth
+  url: https://github.com/tylertitsworth
+name: tensorflow-serving
+type: application
+version: 0.1.0
