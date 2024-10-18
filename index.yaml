@@ -2683,6 +2683,22 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/tensorflow-serving-0.1.0/tensorflow-serving-0.1.0.tgz
     version: 0.1.0
+  text-generation-inference:
+  - apiVersion: v2
+    appVersion: 1.16.0
+    created: "2024-10-18T15:42:52.745141054Z"
+    description: A Rust, Python and gRPC server for text generation inference by huggingface
+      on Intel GPUs.
+    digest: 0ac97d914089785f29c93c146879408132cb52354e54fcac71f68e1a2122e3b0
+    maintainers:
+    - email: tyler.titsworth@intel.com
+      name: tylertitsworth
+      url: https://github.com/tylertitsworth
+    name: text-generation-inference
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/text-generation-inference-0.2.1/text-generation-inference-0.2.1.tgz
+    version: 0.2.1
   torchserve:
   - apiVersion: v2
     appVersion: 1.16.0
@@ -2742,4 +2758,4 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/vault-0.8.0/vault-0.8.0.tgz
     version: 0.8.0
-generated: "2024-10-18T13:43:43.396350464Z"
+generated: "2024-10-18T15:42:52.745662157Z"
