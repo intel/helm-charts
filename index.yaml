@@ -1190,6 +1190,16 @@ entries:
     version: 0.1.0
   intel-device-plugins-dlb:
   - apiVersion: v2
+    appVersion: 0.31.1
+    created: "2024-10-18T13:43:42.80074241Z"
+    description: A Helm chart for Intel DLB Device Plugin
+    digest: e3452ae49adfab2d6212ab5ab80f0fad39db5618741fb9880218bdd5b485d148
+    name: intel-device-plugins-dlb
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/intel-device-plugins-dlb-0.31.1/intel-device-plugins-dlb-0.31.1.tgz
+    version: 0.31.1
+  - apiVersion: v2
     appVersion: 0.31.0
     created: "2024-09-30T10:18:34.020677851Z"
     description: A Helm chart for Intel DLB Device Plugin
@@ -1301,6 +1311,16 @@ entries:
     version: 0.25.0
   intel-device-plugins-dsa:
   - apiVersion: v2
+    appVersion: 0.31.1
+    created: "2024-10-18T13:43:42.883852974Z"
+    description: A Helm chart for Intel DSA Device Plugin
+    digest: 5c4ce78d0cb10ad09e6da8ac64f96256f4612516c6d0ec89f980d82c2ce530c6
+    name: intel-device-plugins-dsa
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/intel-device-plugins-dsa-0.31.1/intel-device-plugins-dsa-0.31.1.tgz
+    version: 0.31.1
+  - apiVersion: v2
     appVersion: 0.31.0
     created: "2024-09-30T10:18:34.132632382Z"
     description: A Helm chart for Intel DSA Device Plugin
@@ -1411,6 +1431,16 @@ entries:
     - https://github.com/intel/helm-charts/releases/download/intel-device-plugins-dsa-0.25.0/intel-device-plugins-dsa-0.25.0.tgz
     version: 0.25.0
   intel-device-plugins-gpu:
+  - apiVersion: v2
+    appVersion: 0.31.1
+    created: "2024-10-18T13:43:42.964895878Z"
+    description: A Helm chart for Intel GPU Device Plugin
+    digest: b48274a32941921cd3777041aba987f0903ba68d34dcdf2e78afcf026a73c9da
+    name: intel-device-plugins-gpu
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/intel-device-plugins-gpu-0.31.1/intel-device-plugins-gpu-0.31.1.tgz
+    version: 0.31.1
   - apiVersion: v2
     appVersion: 0.31.0
     created: "2024-09-30T10:18:34.230767024Z"
@@ -1553,6 +1583,16 @@ entries:
     version: 0.24.1-helm.0
   intel-device-plugins-iaa:
   - apiVersion: v2
+    appVersion: 0.31.1
+    created: "2024-10-18T13:43:43.072578273Z"
+    description: A Helm chart for Intel IAA Device Plugin
+    digest: 1aa5345d8b0465b39e9f679de98cf133a40a969ecca712a6a8345f4998bcbb0c
+    name: intel-device-plugins-iaa
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/intel-device-plugins-iaa-0.31.1/intel-device-plugins-iaa-0.31.1.tgz
+    version: 0.31.1
+  - apiVersion: v2
     appVersion: 0.31.0
     created: "2024-09-30T10:18:34.358917567Z"
     description: A Helm chart for Intel IAA Device Plugin
@@ -1663,6 +1703,16 @@ entries:
     - https://github.com/intel/helm-charts/releases/download/intel-device-plugins-iaa-0.25.0/intel-device-plugins-iaa-0.25.0.tgz
     version: 0.25.0
   intel-device-plugins-operator:
+  - apiVersion: v2
+    appVersion: 0.31.1
+    created: "2024-10-18T13:43:43.179640236Z"
+    description: A Helm chart for Intel Device Plugins Operator for Kubernetes
+    digest: b36e904892ec7ea112bb0fcb27e4100551514c4f78f216880fcbe3abca92a031
+    name: intel-device-plugins-operator
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/intel-device-plugins-operator-0.31.1/intel-device-plugins-operator-0.31.1.tgz
+    version: 0.31.1
   - apiVersion: v2
     appVersion: 0.31.0
     created: "2024-09-30T10:18:34.488235072Z"
@@ -1805,6 +1855,16 @@ entries:
     version: 0.24.0
   intel-device-plugins-qat:
   - apiVersion: v2
+    appVersion: 0.31.1
+    created: "2024-10-18T13:43:43.29134775Z"
+    description: A Helm chart for Intel QAT Device Plugin
+    digest: 4b830e4c0c40ca943257f1cb6ecd837d1f0e67240f1165b520c4a3c76be73adc
+    name: intel-device-plugins-qat
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/intel-device-plugins-qat-0.31.1/intel-device-plugins-qat-0.31.1.tgz
+    version: 0.31.1
+  - apiVersion: v2
     appVersion: 0.31.0
     created: "2024-09-30T10:18:34.594486561Z"
     description: A Helm chart for Intel QAT Device Plugin
@@ -1945,6 +2005,16 @@ entries:
     - https://github.com/intel/helm-charts/releases/download/intel-device-plugins-qat-0.24.0/intel-device-plugins-qat-0.24.0.tgz
     version: 0.24.0
   intel-device-plugins-sgx:
+  - apiVersion: v2
+    appVersion: 0.31.1
+    created: "2024-10-18T13:43:43.395657612Z"
+    description: A Helm chart for Intel SGX Device Plugin
+    digest: 1fb1c38444985b4a685d3d41f184d63d56f6dad14cd4382151af77735398e523
+    name: intel-device-plugins-sgx
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/intel-device-plugins-sgx-0.31.1/intel-device-plugins-sgx-0.31.1.tgz
+    version: 0.31.1
   - apiVersion: v2
     appVersion: 0.31.0
     created: "2024-09-30T10:18:34.681164104Z"
@@ -2672,4 +2742,4 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/vault-0.8.0/vault-0.8.0.tgz
     version: 0.8.0
-generated: "2024-10-18T07:51:12.889519562Z"
+generated: "2024-10-18T13:43:43.396350464Z"
