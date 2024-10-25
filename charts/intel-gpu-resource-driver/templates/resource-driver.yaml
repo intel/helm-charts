@@ -30,15 +30,6 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
-        - name: SYSFS_ROOT
-          value: "/sysfs"
-        # Only use devdri when using fake devfs with device-faker.
-        # Use this to tell kubelet-plugin where the fake DRI devices nodes are.
-        # This will be prefix for CDI devices, runtime will try to mount devices
-        # with this prefix into workloads, so the path should be equal to where
-        # fake DRI files are in real host.
-        #- name: DEV_DRI_PATH
-        #  value: "/tmp/test-0123456789/dev/dri"
         volumeMounts:
         - name: plugins-registry
           mountPath: /var/lib/kubelet/plugins_registry
@@ -48,12 +39,6 @@ spec:
           mountPath: /etc/cdi
         - name: varruncdi
           mountPath: /var/run/cdi
-        # when using fake sysfs - mount at the same place as on host
-        - name: sysfs
-          mountPath: "/sysfs"
-        # Only use devdri when using fake devfs with device-faker
-        #- name: devdri
-        #  mountPath: "/tmp/test-0123456789/dev/dri"
         securityContext:
           privileged: false
           allowPrivilegeEscalation: false
@@ -76,13 +61,6 @@ spec:
       - name: varruncdi
         hostPath:
           path: /var/run/cdi
-      - name: sysfs
-        hostPath:
-          path: /sys
-      # Only use devdri when using fake devfs with device-faker
-      #- name: devdri
-      #  hostPath:
-      #    path: /tmp/test-0123456789/dev/dri
       {{- with .Values.kubeletPlugin.tolerations }}
       tolerations:
         {{- toYaml . | nindent 8 }}
