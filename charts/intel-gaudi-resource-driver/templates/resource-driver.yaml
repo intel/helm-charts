@@ -30,6 +30,8 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
+        - name: SYSFS_ROOT
+          value: "/sysfs"
         volumeMounts:
         - name: plugins-registry
           mountPath: /var/lib/kubelet/plugins_registry
@@ -39,6 +41,9 @@ spec:
           mountPath: /etc/cdi
         - name: varruncdi
           mountPath: /var/run/cdi
+        # when using fake sysfs - mount at the same place as on host
+        - name: sysfs
+          mountPath: "/sysfs"
         securityContext:
           privileged: false
           allowPrivilegeEscalation: false
@@ -61,6 +66,9 @@ spec:
       - name: varruncdi
         hostPath:
           path: /var/run/cdi
+      - name: sysfs
+        hostPath:
+          path: /sys
       {{- with .Values.kubeletPlugin.tolerations }}
       tolerations:
         {{- toYaml . | nindent 8 }}
