@@ -16,8 +16,6 @@ helm repo update
 You can execute `helm search repo intel` command to see pulled charts [optional].
 
 ## Install Helm Chart
-CRDs of the qat driver are installed as part of the chart first.
-
 ```
 helm install intel-qat-resource-driver intel/intel-qat-resource-driver
 ```
@@ -47,7 +45,4 @@ You may also run `helm show values` on this chart's dependencies for additional 
 | image.pullPolicy | string | `"IfNotPresent"` |
 | image.tag | string | `"v0.1.0"` |
 
-If you change the image tag to be used in Helm chart deployment, ensure that the version of the container image is consistent with CRDs and deployment YAMLs - they might change between releases.
-
-> [!Note]
-> When upgrading, CRDs from previous version need to be removed manually because Helm supports neither upgrading nor deleting CRDs, see: https://github.com/helm/community/blob/main/hips/hip-0011.md
+If you change the image tag to be used in Helm chart deployment, ensure that the version of the container image is consistent with deployment YAMLs - they might change between releases.
