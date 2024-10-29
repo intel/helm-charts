@@ -2222,6 +2222,18 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/intel-gpu-resource-driver-0.2.0/intel-gpu-resource-driver-0.2.0.tgz
     version: 0.2.0
+  intel-qat-resource-driver:
+  - apiVersion: v2
+    appVersion: v0.1.0
+    created: "2024-10-29T07:51:00.034128735Z"
+    description: A Helm chart for a Dynamic Resource Allocation (DRA) Intel QAT Resource
+      Driver
+    digest: 0624ac688de4f11d027e0a4835088e2a81af4a20a303bf513a59f38cd1592c7c
+    name: intel-qat-resource-driver
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/intel-qat-resource-driver-0.1.0/intel-qat-resource-driver-0.1.0.tgz
+    version: 0.1.0
   itm-mqtt-broker:
   - apiVersion: v2
     appVersion: 1.0.0
@@ -2758,4 +2770,4 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/vault-0.8.0/vault-0.8.0.tgz
     version: 0.8.0
-generated: "2024-10-18T15:42:52.745662157Z"
+generated: "2024-10-29T07:51:00.165989456Z"
