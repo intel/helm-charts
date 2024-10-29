@@ -9,15 +9,15 @@ image:
   repository: intel
   name: intel-gaudi-resource-driver
   pullPolicy: IfNotPresent
-  tag: "v0.1.1"
+  tag: "v0.2.0"
 
 serviceAccount:
+  create: true
   annotations: {}
-  name: "intel-gaudi-resource-driver-service-account"
+  name: intel-gaudi-resource-driver-service-account
   automount: true
 
-# Define Controller Part
-controller:
+kubeletPlugin:
   podAnnotations: {}
   tolerations:
     - key: node-role.kubernetes.io/master
@@ -26,14 +26,6 @@ controller:
     - key: node-role.kubernetes.io/control-plane
       operator: Exists
       effect: NoSchedule
-  nodeSelector:
-    {}
-    #node-role.kubernetes.io/control-plane: ""
-  affinity: {}
-
-# Define Kubelet-Plugin Part
-kubeletPlugin:
-  podAnnotations: {}
-  tolerations: []
   nodeSelector: {}
+  #node-role.kubernetes.io/control-plane: ""
   affinity: {}

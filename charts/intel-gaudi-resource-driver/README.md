@@ -43,9 +43,7 @@ You may also run `helm show values` on this chart's dependencies for additional 
 | image.repository | string | `intel` |
 | image.name | string | `"intel-gaudi-resource-driver"` |
 | image.pullPolicy | string | `"IfNotPresent"` |
-| image.tag | string | `"v0.1.1"` |
-
-If you change the image tag to be used in Helm chart deployment, ensure that the version of the container image is consistent with CRDs and deployment YAMLs - they might change between releases.
+| image.tag | string | `"v0.2.0"` |
 
 > [!Note]
-> Helm does not support _upgrading_ (or deleting) CRDs to prevent data loss. Only installing CRDs is supported. Details: https://github.com/helm/community/blob/main/hips/hip-0011.md
+> When upgrading, CRDs from previous version need to be removed manually because Helm supports neither upgrading nor deleting CRDs, see: https://github.com/helm/community/blob/main/hips/hip-0011.md
