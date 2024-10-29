@@ -5,11 +5,11 @@ metadata:
   namespace: {{ include "intel-gpu-resource-driver.namespace" . }}
 rules:
 - apiGroups: [""]
-  resources: ["pods", "nodes", "events"]
-  verbs: ["get", "list", "create", "watch", "patch"]
+  resources: ["nodes"]
+  verbs: ["get"]
 - apiGroups: ["resource.k8s.io"]
-  resources: ["resourceclaims", "resourceclasses", "podschedulings","resourceclaims/status", "podschedulings/status", "podschedulingcontexts", "podschedulingcontexts/status"]
-  verbs: ["get", "update", "list", "watch", "patch"]
-- apiGroups: ["gpu.resource.intel.com"]
-  resources: ["*"]
-  verbs: ["*"]
+  resources: ["resourceslices"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["resource.k8s.io"]
+  resources: ["resourceclaims"]
+  verbs: ["get"]
