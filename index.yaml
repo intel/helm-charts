@@ -2190,6 +2190,17 @@ entries:
     version: 0.1.1
   intel-gpu-resource-driver:
   - apiVersion: v2
+    appVersion: v0.6.0
+    created: "2024-10-29T07:51:31.862344624Z"
+    description: A Helm chart for a Dynamic Resource Allocation (DRA) Intel GPU Resource
+      Driver
+    digest: 94a40eeb443fb42fac9343591b69d83638d4b0e56da87452fcbdc5c8061d45cb
+    name: intel-gpu-resource-driver
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/intel-gpu-resource-driver-0.6.0/intel-gpu-resource-driver-0.6.0.tgz
+    version: 0.6.0
+  - apiVersion: v2
     appVersion: v0.5.1
     created: "2024-08-08T07:41:47.915389714Z"
     description: A Helm chart for a Dynamic Resource Allocation (DRA) Intel GPU Resource
@@ -2781,4 +2792,4 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/vault-0.8.0/vault-0.8.0.tgz
     version: 0.8.0
-generated: "2024-10-29T07:51:13.538316766Z"
+generated: "2024-10-29T07:51:31.862725776Z"
