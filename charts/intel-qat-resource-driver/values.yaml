@@ -1,0 +1,32 @@
+# Default values for intel-qat-resource-driver.
+nameOverride: ""
+namespaceOverride: "intel-qat-resource-driver"
+fullnameOverride: ""
+selectorLabelsOverride: {}
+
+imagePullSecrets: []
+image:
+  repository: intel
+  name: intel-qat-resource-driver
+  pullPolicy: IfNotPresent
+  tag: "v0.1.0"
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: "intel-qat-resource-driver-service-account"
+  automount: true
+
+kubeletPlugin:
+  podAnnotations: {}
+  tolerations:
+    - key: node-role.kubernetes.io/master
+      operator: Exists
+      effect: NoSchedule
+    - key: node-role.kubernetes.io/control-plane
+      operator: Exists
+      effect: NoSchedule
+  nodeSelector:
+    {}
+    #node-role.kubernetes.io/control-plane: ""
+  affinity: {}
