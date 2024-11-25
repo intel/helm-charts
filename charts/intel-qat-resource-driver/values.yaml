@@ -19,14 +19,22 @@ serviceAccount:
 
 kubeletPlugin:
   podAnnotations: {}
-  tolerations:
-    - key: node-role.kubernetes.io/master
-      operator: Exists
-      effect: NoSchedule
-    - key: node-role.kubernetes.io/control-plane
-      operator: Exists
-      effect: NoSchedule
   nodeSelector:
-    {}
+    feature.node.kubernetes.io/qat: "true"
     #node-role.kubernetes.io/control-plane: ""
+  tolerations:
+    # - key: node-role.kubernetes.io/master
+    #   operator: Exists
+    #   effect: NoSchedule
+    # - key: node-role.kubernetes.io/control-plane
+    #   operator: Exists
+    #   effect: NoSchedule
+    - key: "node.kubernetes.io/qat"
+      operator: "Exists"
+      effect: "NoSchedule"
   affinity: {}
+
+nfd:
+  enabled: false # change to true if NFD is not installed in cluster
+  nameOverride: intel-qat-nfd
+  enableNodeFeatureApi: true

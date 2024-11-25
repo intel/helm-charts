@@ -16,7 +16,9 @@ helm repo update
 You can execute `helm search repo intel` command to see pulled charts [optional].
 
 ## Install Helm Chart
+When installing, update the dependencies:
 ```
+helm dependency update
 helm install intel-qat-resource-driver intel/intel-qat-resource-driver
 ```
 ## Upgrade Chart
