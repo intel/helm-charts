@@ -48,3 +48,21 @@ You may also run `helm show values` on this chart's dependencies for additional 
 | image.tag | string | `"v0.1.0"` |
 
 If you change the image tag to be used in Helm chart deployment, ensure that the version of the container image is consistent with deployment YAMLs - they might change between releases.
+
+
+## Troubleshooting read-only file system error for QAT
+
+When the following error appears in the logs of the QAT Kubelet plugin:
+```
+kubectl logs -n intel-qat-resource-driver intel-qat-resource-driver-kubelet-plugin-ttcs6
+DRA kubelet plugin
+In-cluster config
+Setting up CDI
+failed to create kubelet plugin driver: cannot enable PF device '0000:6b:00.0': open /sysfs/bus/pci/devices/0000:6b:00.0/sriov_numvfs: read-only file system
+```
+
+Verify the QAT driver configuration by resetting it:
+```
+rmmod qat_4xxx
+modprobe qat_4xxx
+```
