@@ -39,4 +39,6 @@ kubeletPlugin:
 nfd:
   enabled: false # change to true to install NFD to the cluster
   nameOverride: intel-qat-nfd
+  # TODO: this deprecated NFD option will be replaced in NFD v0.17 with "featureGates.NodeFeatureAPI" (added in v0.16):
+  # https://kubernetes-sigs.github.io/node-feature-discovery/v0.16/deployment/helm.html#general-parameters
   enableNodeFeatureApi: true
