@@ -6,7 +6,7 @@ spec:
   rules:
     - name: "intel.gpu"
       labels:
-        "feature.node.kubernetes.io/gpu": "true"
+        "intel.feature.node.kubernetes.io/gpu": "true"
       matchFeatures:
         - feature: pci.device
           matchExpressions:
