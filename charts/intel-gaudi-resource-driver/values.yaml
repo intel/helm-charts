@@ -19,6 +19,8 @@ serviceAccount:
 
 kubeletPlugin:
   podAnnotations: {}
+  nodeSelector:
+    intel.feature.node.kubernetes.io/gaudi: "true"
   tolerations:
     - key: node-role.kubernetes.io/master
       operator: Exists
@@ -26,6 +28,17 @@ kubeletPlugin:
     - key: node-role.kubernetes.io/control-plane
       operator: Exists
       effect: NoSchedule
-  nodeSelector: {}
-  #node-role.kubernetes.io/control-plane: ""
+      # Refer to the official documentation for Node Feature Discovery (NFD) 
+      # regarding node tainting: 
+      # https://nfd.sigs.k8s.io/usage/customization-guide#node-tainting
+    - key: "intel.feature.node.kubernetes.io/gaudi"
+      operator: "Exists"
+      effect: "NoSchedule"  
   affinity: {}
+
+nfd:
+  enabled: false # change to true to install NFD to the cluster
+  nameOverride: intel-gaudi-nfd
+  # TODO: this deprecated NFD option will be replaced in NFD v0.17 with "featureGates.NodeFeatureAPI" (added in v0.16):
+  # https://kubernetes-sigs.github.io/node-feature-discovery/v0.16/deployment/helm.html#general-parameters
+  enableNodeFeatureApi: true
