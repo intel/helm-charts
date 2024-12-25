@@ -6,7 +6,7 @@ spec:
   rules:
     - name: "intel.gpu"
       labels:
-        intel.feature.node.kubernetes.io/gpu: "true"
+        "intel.feature.node.kubernetes.io/gpu": "true"
       matchFeatures:
         - feature: pci.device
           matchExpressions:
@@ -28,114 +28,67 @@ metadata:
   name: intel-gpu-platform-labeling
 spec:
   rules:
-  - matchFeatures:
-      - feature: local.label
-        matchExpressions:
-          gpu.intel.com/millicores: {op: Exists}
-          gpu.intel.com/memory.max: {op: Exists}
-          gpu.intel.com/tiles: {op: Exists}
-    name: intel.gpu.fractionalresources
-    labels:
-      intel.feature.node.kubernetes.io/gpu: "true"
-  # generic rule for older and upcoming devices
-  - labelsTemplate: |
-      {{"{{"}} range .pci.device {{"}}"}}gpu.intel.com/device-id.{{"{{"}} .class {{"}}"}}-{{"{{"}} .device {{"}}"}}.present=true
-      {{"{{"}} end {{"}}"}}
-    matchFeatures:
-      - feature: pci.device
-        matchExpressions:
-          class:
-            op: In
-            value:
-            - "0300"
-            - "0380"
-          vendor:
-            op: In
-            value:
-            - "8086"
-    name: intel.gpu.generic.deviceid
-  - labelsTemplate: gpu.intel.com/device-id.0300-{{"{{"}} (index .pci.device 0).device {{"}}"}}.count={{"{{"}} len .pci.device {{"}}"}}
-    matchFeatures:
-      - feature: pci.device
-        matchExpressions:
-          class:
-            op: In
-            value:
-            - "0300"
-          vendor:
-            op: In
-            value:
-            - "8086"
-    name: intel.gpu.generic.count.300
-  - labelsTemplate: gpu.intel.com/device-id.0380-{{"{{"}} (index .pci.device 0).device {{"}}"}}.count={{"{{"}} len .pci.device {{"}}"}}
-    matchFeatures:
-      - feature: pci.device
-        matchExpressions:
-          class:
-            op: In
-            value:
-            - "0380"
-          vendor:
-            op: In
-            value:
-            - "8086"
-    name: intel.gpu.generic.count.380
-  - labels:
-      gpu.intel.com/family: "Max_Series"
-    matchFeatures:
-    - feature: pci.device
-      matchExpressions:
-        class:
-          op: In
-          value:
-          - "0380"
-        vendor:
-          op: In
-          value:
-          - "8086"
-        device:
-          op: In
-          value:
-          - "0bda"
-          - "0bd5"
-          - "0bd9"
-          - "0bdb"
-          - "0bd7"
-          - "0bd6"
-          - "0bd0"
-    name: intel.gpu.max.series
-  - labels:
-      gpu.intel.com/family: "A_Series"
-    matchFeatures:
-    - feature: pci.device
-      matchExpressions:
-        class:
-          op: In
-          value:
-          - "0300"
-        vendor:
-          op: In
-          value:
-          - "8086"
-        device:
-          op: In
-          value:
-          - "56a6"
-          - "56a5"
-          - "56a1"
-          - "56a0"
-          - "5694"
-          - "5693"
-          - "5692"
-          - "5691"
-          - "5690"
-          - "56b3"
-          - "56b2"
-          - "56a4"
-          - "56a3"
-          - "5697"
-          - "5696"
-          - "5695"
-          - "56b1"
-          - "56b0"
-    name: intel.gpu.a.series
+    # A_Series (Alchemist)
+    - labels:
+        gpu.intel.com/family: "A_Series"
+      matchFeatures:
+        - feature: pci.device
+          matchExpressions:
+            class: {op: In, value: ["0300"]}
+            vendor: {op: In, value: ["8086"]}
+            device:
+              op: In
+              value:
+                - "56a6"
+                - "56a5"
+                - "56a1"
+                - "56a0"
+                - "5694"
+                - "5693"
+                - "5692"
+                - "5691"
+                - "5690"
+                - "56b3"
+                - "56b2"
+                - "56a4"
+                - "56a3"
+                - "5697"
+                - "5696"
+                - "5695"
+                - "56b1"
+                - "56b0"
+      name: intel.gpu.a.series
+    # Max_Series
+    - labels:
+        gpu.intel.com/family: "Max_Series"
+      matchFeatures:
+        - feature: pci.device
+          matchExpressions:
+            class: {op: In, value: ["0380"]}
+            vendor: {op: In, value: ["8086"]}
+            device:
+              op: In
+              value:
+                - "0bda"
+                - "0bd5"
+                - "0bd9"
+                - "0bdb"
+                - "0bd7"
+                - "0bd6"
+                - "0bd0"
+      name: intel.gpu.max.series
+    # Flex_Series
+    - labels:
+        gpu.intel.com/family: "Flex_Series"
+      matchFeatures:
+        - feature: pci.device
+          matchExpressions:
+            class: {op: In, value: ["0300", "0380"]}
+            vendor: {op: In, value: ["8086"]}
+            device:
+              op: In
+              value:
+                - "0f00"
+                - "0f01"
+                - "0f02"
+      name: intel.gpu.flex.series
