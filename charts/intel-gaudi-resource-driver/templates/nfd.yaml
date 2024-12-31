@@ -1,3 +1,4 @@
+{{- if .Values.nfd.enabled }}
 apiVersion: nfd.k8s-sigs.io/v1alpha1
 kind: NodeFeatureRule
 metadata:
@@ -12,4 +13,4 @@ spec:
           matchExpressions:
             vendor: {op: In, value: ["1da3"]}
             device: {op: In, value: ["1020", "1030"]}
- 
+{{- end }}

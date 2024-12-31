@@ -19,8 +19,9 @@ serviceAccount:
 
 kubeletPlugin:
   podAnnotations: {}
-  nodeSelector:
-    intel.feature.node.kubernetes.io/gaudi: "true"
+  nodeSelector: {}
+  # label used when nfd.enabled is true
+    #intel.feature.node.kubernetes.io/gaudi: "true"
   tolerations:
     - key: node-role.kubernetes.io/master
       operator: Exists
