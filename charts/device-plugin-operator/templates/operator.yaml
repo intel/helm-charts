@@ -367,6 +367,7 @@ spec:
         secret:
           defaultMode: 420
           secretName: webhook-server-cert
+      tolerations: {{ .Values.tolerations | toYaml | nindent 8 }}
 ---
 apiVersion: cert-manager.io/v1
 kind: Certificate
