@@ -3,8 +3,8 @@ name: intel-gaudi-resource-driver
 description: A Helm chart for a Dynamic Resource Allocation (DRA) Intel Gaudi Resource Driver
 
 type: application
-version: 0.2.0
-appVersion: "v0.2.0"
+version: 0.3.0
+appVersion: "v0.3.0"
 home: https://github.com/intel/helm-charts
 
 dependencies:
