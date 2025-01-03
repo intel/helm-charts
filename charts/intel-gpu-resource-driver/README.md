@@ -45,7 +45,7 @@ You may also run `helm show values` on this chart's dependencies for additional 
 | image.repository | string | `intel` |
 | image.name | string | `"intel-gpu-resource-driver"` |
 | image.pullPolicy | string | `"IfNotPresent"` |
-| image.tag | string | `"v0.6.0"` |
+| image.tag | string | `"v0.7.0"` |
 
 > [!Note]
 > When upgrading, CRDs from previous version need to be removed manually because Helm supports neither upgrading nor deleting CRDs, see: https://github.com/helm/community/blob/main/hips/hip-0011.md
