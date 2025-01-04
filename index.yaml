@@ -2167,6 +2167,24 @@ entries:
     version: 0.24.0
   intel-gaudi-resource-driver:
   - apiVersion: v2
+    appVersion: v0.3.0
+    created: "2025-01-04T22:02:27.458453017Z"
+    dependencies:
+    - alias: nfd
+      condition: nfd.enabled
+      name: node-feature-discovery
+      repository: https://kubernetes-sigs.github.io/node-feature-discovery/charts
+      version: 0.16.6
+    description: A Helm chart for a Dynamic Resource Allocation (DRA) Intel Gaudi
+      Resource Driver
+    digest: 18eaf3edf42896b0544828f422ebdff8d59862e435474ed9ff390dd1dcf95f20
+    home: https://github.com/intel/helm-charts
+    name: intel-gaudi-resource-driver
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/intel-gaudi-resource-driver-0.3.0/intel-gaudi-resource-driver-0.3.0.tgz
+    version: 0.3.0
+  - apiVersion: v2
     appVersion: v0.2.0
     created: "2024-10-29T07:51:13.537769525Z"
     description: A Helm chart for a Dynamic Resource Allocation (DRA) Intel Gaudi
@@ -2810,4 +2828,4 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/vault-0.8.0/vault-0.8.0.tgz
     version: 0.8.0
-generated: "2025-01-04T22:02:07.087589538Z"
+generated: "2025-01-04T22:02:27.458819053Z"
