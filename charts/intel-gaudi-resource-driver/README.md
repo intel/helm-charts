@@ -16,7 +16,9 @@ helm repo update
 You can execute `helm search repo intel` command to see pulled charts [optional].
 
 ## Install Helm Chart
+When installing, update the dependencies:
 ```
+helm dependency update
 helm install intel-gaudi-resource-driver intel/intel-gaudi-resource-driver
 ```
 ## Upgrade Chart
@@ -43,7 +45,7 @@ You may also run `helm show values` on this chart's dependencies for additional 
 | image.repository | string | `intel` |
 | image.name | string | `"intel-gaudi-resource-driver"` |
 | image.pullPolicy | string | `"IfNotPresent"` |
-| image.tag | string | `"v0.2.0"` |
+| image.tag | string | `"v0.3.0"` |
 
 > [!Note]
-> When upgrading, CRDs from previous version need to be removed manually because Helm supports neither upgrading nor deleting CRDs, see: https://github.com/helm/community/blob/main/hips/hip-0011.md
+> If you change the image tag to be used in Helm chart deployment, ensure that the version of the container image is consistent with deployment YAMLs - they might change between releases.
