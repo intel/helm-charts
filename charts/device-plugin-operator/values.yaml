@@ -7,12 +7,15 @@ manager:
     tag: ""
     pullPolicy: IfNotPresent
 
-kubeRbacProxy:
-  image:
-    hub: quay.io
-    hubRepo: brancz
-    tag: v0.18.1
-    pullPolicy: IfNotPresent
+  # supported devices by the operator
+  devices:
+    # dlb: true
+    # dsa: true
+    # fpga: true
+    # gpu: true
+    # iaa: true
+    # qat: true
+    # sgx: true
 
 privateRegistry:
   registryUrl: ""
