@@ -191,7 +191,7 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: inteldeviceplugins-proxy-role
+  name: inteldeviceplugins-auth-role
 rules:
 - apiGroups:
   - authentication.k8s.io
@@ -236,11 +236,11 @@ subjects:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: inteldeviceplugins-proxy-rolebinding
+  name: inteldeviceplugins-auth-rolebinding
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: inteldeviceplugins-proxy-role
+  name: inteldeviceplugins-auth-role
 subjects:
 - kind: ServiceAccount
   name: default
@@ -306,6 +306,17 @@ spec:
       {{- end }}
       containers:
       - args:
+        - "--metrics-bind-address=:8443"
+        - "--metrics-secure"
+        - "--health-probe-bind-address=:8081"
+        - "--leader-elect"
+        {{- if .Values.manager.devices }}
+        {{- range $key, $value := .Values.manager.devices }}
+          {{- if $value }}
+        - "--devices={{- $key }}"
+          {{- end }}
+        {{- end }}
+        {{- end }}
         {{- if .Values.controllerExtraArgs }}
         {{- with .Values.controllerExtraArgs }}
         {{- tpl . $ | trim | nindent 8 }}
@@ -318,6 +329,18 @@ spec:
               fieldPath: metadata.namespace
         image: "{{ .Values.manager.image.hub }}/intel-deviceplugin-operator:{{ .Values.manager.image.tag | default .Chart.AppVersion  }}"
         imagePullPolicy: {{ .Values.manager.image.pullPolicy }}
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8081
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8081
+          initialDelaySeconds: 5
+          periodSeconds: 10
         name: manager
         ports:
         - containerPort: 9443
@@ -340,25 +363,6 @@ spec:
         - mountPath: /tmp/k8s-webhook-server/serving-certs
           name: cert
           readOnly: true
-      - args:
-        - --secure-listen-address=0.0.0.0:8443
-        - --upstream=http://127.0.0.1:8080/
-        - --logtostderr=true
-        - --tls-cipher-suites=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
-        - --v=10
-        image: "{{ .Values.kubeRbacProxy.image.hub }}/{{ .Values.kubeRbacProxy.image.hubRepo }}/kube-rbac-proxy:{{ .Values.kubeRbacProxy.image.tag }}"
-        name: kube-rbac-proxy
-        ports:
-        - containerPort: 8443
-          name: https
-        securityContext:
-          allowPrivilegeEscalation: false
-          readOnlyRootFilesystem: true
-          runAsGroup: 1000
-          runAsNonRoot: true
-          runAsUser: 1000
-          seccompProfile:
-            type: RuntimeDefault
       nodeSelector: {{- .Values.nodeSelector | toYaml | nindent 8 }}
       serviceAccountName: default
       terminationGracePeriodSeconds: 10

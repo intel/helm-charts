@@ -24,6 +24,7 @@ helm install device-plugin-operator intel/intel-device-plugins-operator [flags]
 ```
 helm upgrade device-plugin-operator intel/intel-device-plugins-operator [flags]
 ```
+CRDs are not upgraded.
 
 ## Uninstall Chart
 ```
@@ -44,11 +45,16 @@ You may also run `helm show values` on this chart's dependencies for additional 
 |---------|-----------|
 | `manager.image.hub` | `intel` |
 | `manager.image.tag` | `` |
-| `kubeRbacProxy.image.hub` | `quay.io` |
-| `kubeRbacProxy.image.hubRepo` | `brancz` |
-| `kubeRbacProxy.image.tag` | `v0.18.1` |
-| `kubeRbacProxy.image.pullPolicy` | `IfNotPresent` |
+| `manager.devices` | `` |
 | `privateRegistry.registryUrl` | `` |
 | `privateRegistry.registryUser` | `` |
 | `privateRegistry.registrySecret` | `` |
 | `pullPolicy` | `IfNotPresent` |
+
+Defining `manager.devices` with a name-bool dictionary allows enabling only certain devices. The following will enable only fpga and gpu devices:
+```
+manager:
+  devices:
+    fpga: true
+    gpu: true
+```
