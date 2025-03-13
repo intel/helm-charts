@@ -18,6 +18,6 @@ allocationPolicy: "none"
 nodeSelector:
   intel.feature.node.kubernetes.io/gpu: 'true'
 
-tolerations:
+tolerations: []
 
 nodeFeatureRule: true
