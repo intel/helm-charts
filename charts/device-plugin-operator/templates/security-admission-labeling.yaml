@@ -1,0 +1,57 @@
+{{- if .Values.podSecurityAdmission.enabled }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: security-admission-labels-sa
+  namespace: {{ .Release.Namespace | quote }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: security-admission-labels-role
+  namespace: {{ .Release.Namespace | quote }}
+rules:
+  - apiGroups: [""]
+    resources: ["namespaces"]
+    verbs: ["get", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: security-admission-labels-rb
+  namespace: {{ .Release.Namespace | quote }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: security-admission-labels-role
+subjects:
+  - kind: ServiceAccount
+    name: security-admission-labels-sa
+    namespace: {{ .Release.Namespace | quote }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: security-admission-labels-job
+  namespace: {{ .Release.Namespace | quote }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-delete-policy": hook-succeeded
+spec:
+  template:
+    metadata:
+      labels:
+        app: security-admission-labels
+    spec:
+      serviceAccountName: security-admission-labels-sa
+      containers:
+        - name: labeler
+          image: {{ .Values.podSecurityAdmission.kubectlImage }}
+          command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Patch namespace with security admission labels"
+              kubectl patch namespace {{ .Release.Namespace }} -p '{"metadata":{"labels":{"pod-security.kubernetes.io/enforce": "privileged", "pod-security.kubernetes.io/audit": "privileged", "pod-security.kubernetes.io/warn": "privileged"}}}' --type=merge
+      restartPolicy: Never
+{{- end }}

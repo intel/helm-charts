@@ -22,6 +22,10 @@ privateRegistry:
   registryUser: ""
   registrySecret: ""
 
+podSecurityAdmission:
+  enabled: true
+  kubectlImage: bitnami/kubectl:latest
+
 resources:
   limits:
     cpu: 100m
