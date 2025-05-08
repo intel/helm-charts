@@ -2,7 +2,7 @@
 based on
 deployments/operator/samples/deviceplugin_v1_gpudeviceplugin.yaml
 */}}
-
+{{- if .Values.operator }}
 apiVersion: deviceplugin.intel.com/v1
 kind: GpuDevicePlugin
 metadata:
@@ -21,7 +21,7 @@ spec:
 
   nodeSelector: {{- .Values.nodeSelector | toYaml | nindent 4 }}
   tolerations: {{- .Values.tolerations | toYaml | nindent 4 }}
-
+{{- end }}
 ---
 {{- if eq .Values.nodeFeatureRule true }}
 apiVersion: nfd.k8s-sigs.io/v1alpha1

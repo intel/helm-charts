@@ -21,3 +21,10 @@ nodeSelector:
 tolerations: []
 
 nodeFeatureRule: true
+
+# to preserve backward compatibility
+operator: true
+
+# to deploy the device plugin as a DaemonSet
+daemonSet:
+  enabled: false
