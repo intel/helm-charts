@@ -1,4 +1,4 @@
-{{- if .Values.daemonSet.enabled }}
+{{- if .Values.deployWithoutOperator }}
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
@@ -19,17 +19,32 @@ spec:
       labels:
         app: intel-gpu-plugin
     spec:
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       containers:
       - name: intel-gpu-plugin
+        {{- if or .Values.sharedDevNum .Values.logLevel .Values.enableMonitoring .Values.allocationPolicy }}
+        args:
+          {{- if .Values.sharedDevNum }}
+          - "-shared-dev-num={{ .Values.sharedDevNum }}"
+          {{- end }}
+          {{- if .Values.enableMonitoring }}
+          - "-enable-monitoring"
+          {{- end }}
+          {{- if .Values.logLevel }}
+          - "-v={{ .Values.logLevel }}"
+          {{- end }}
+          {{- if .Values.allocationPolicy }}
+          - "-allocation-policy={{ .Values.allocationPolicy }}"
+          {{- end }}
+        {{- end }}
         env:
           - name: NODE_NAME
             valueFrom:
               fieldRef:
                 fieldPath: spec.nodeName
-          - name: HOST_IP
-            valueFrom:
-              fieldRef:
-                fieldPath: status.hostIP
         image: "{{ .Values.image.hub }}/intel-gpu-plugin:{{ .Values.image.tag | default .Chart.AppVersion }}"
         imagePullPolicy: IfNotPresent
         securityContext:
@@ -75,5 +90,5 @@ spec:
           path: /var/run/cdi
           type: DirectoryOrCreate
       nodeSelector:
-        kubernetes.io/arch: amd64
+        {{- .Values.nodeSelector | nindent 8 }}
 {{- end }}

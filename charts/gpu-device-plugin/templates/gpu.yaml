@@ -2,7 +2,7 @@
 based on
 deployments/operator/samples/deviceplugin_v1_gpudeviceplugin.yaml
 */}}
-{{- if .Values.operator }}
+{{- if not .Values.deployWithoutOperator }}
 apiVersion: deviceplugin.intel.com/v1
 kind: GpuDevicePlugin
 metadata:
