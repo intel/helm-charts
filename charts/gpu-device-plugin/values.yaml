@@ -21,3 +21,6 @@ nodeSelector:
 tolerations: []
 
 nodeFeatureRule: true
+
+# to preserve backward compatibility
+deployWithoutOperator: false
