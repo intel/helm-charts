@@ -43,3 +43,10 @@ You may also run `helm show values` on this chart's dependencies for additional 
 | `enableMonitoring` | `true` |
 | `allocationPolicy` | `none` |
 | `logLevel` | `2` |
+
+## Alternative installation methods for Intel GPU plugin
+This method deploys device plugin as a DaemonSet without use of Operator.
+
+```
+helm install gpu-device-plugin intel/intel-device-plugins-gpu --set deployWithoutOperator=true
+```
