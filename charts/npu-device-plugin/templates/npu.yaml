@@ -1,0 +1,48 @@
+{{- /*
+based on
+deployments/operator/samples/deviceplugin_v1_npudeviceplugin.yaml
+*/}}
+
+apiVersion: deviceplugin.intel.com/v1
+kind: NpuDevicePlugin
+metadata:
+  name: {{ .Values.name }}
+  annotations: {{ toYaml .Values.annotations | nindent 4 }}
+spec:
+  image: "{{ .Values.image.hub }}/intel-npu-plugin:{{ .Values.image.tag | default .Chart.AppVersion }}"
+  logLevel:  {{ .Values.logLevel }}
+  sharedDevNum: {{ .Values.sharedDevNum }}
+
+  nodeSelector: {{- .Values.nodeSelector | toYaml | nindent 4 }}
+  tolerations: {{- .Values.tolerations | toYaml | nindent 4 }}
+
+---
+{{- if eq .Values.nodeFeatureRule true }}
+apiVersion: nfd.k8s-sigs.io/v1alpha1
+kind: NodeFeatureRule
+metadata:
+  name: intel-dp-npu-device
+spec:
+  rules:
+    - name: "intel.npu"
+      labels:
+        "intel.feature.node.kubernetes.io/npu": "true"
+      matchFeatures:
+        - feature: pci.device
+          matchExpressions:
+            vendor: {op: In, value: ["8086"]}
+            class: {op: In, value: ["1200"]}
+            device: {
+              op: In,
+              value: ["7e4c","643e","ad1d","7d1d"]
+            }
+      matchAny:
+        - matchFeatures:
+          - feature: kernel.loadedmodule
+            matchExpressions:
+              intel_vpu: {op: Exists}
+        - matchFeatures:
+          - feature: kernel.enabledmodule
+            matchExpressions:
+              intel_vpu: {op: Exists}
+{{- end }}
