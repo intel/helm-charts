@@ -15,9 +15,10 @@ spec:
   {{- end }}
   logLevel:  {{ .Values.logLevel }}
   sharedDevNum: {{ .Values.sharedDevNum }}
-  resourceManager: {{ .Values.resourceManager }}
   enableMonitoring: {{ .Values.enableMonitoring }}
   preferredAllocationPolicy: {{ .Values.allocationPolicy }}
+  allowIDs: {{ .Values.allowIDs | quote }}
+  denyIDs: {{ .Values.denyIDs | quote }}
 
   nodeSelector: {{- .Values.nodeSelector | toYaml | nindent 4 }}
   tolerations: {{- .Values.tolerations | toYaml | nindent 4 }}
@@ -62,17 +63,6 @@ metadata:
   name: intel-gpu-platform-labeling
 spec:
   rules:
-  - extendedResources:
-      gpu.intel.com/millicores: "@local.label.gpu.intel.com/millicores"
-      gpu.intel.com/memory.max: "@local.label.gpu.intel.com/memory.max"
-      gpu.intel.com/tiles: "@local.label.gpu.intel.com/tiles"
-    matchFeatures:
-      - feature: local.label
-        matchExpressions:
-          gpu.intel.com/millicores: {op: Exists}
-          gpu.intel.com/memory.max: {op: Exists}
-          gpu.intel.com/tiles: {op: Exists}
-    name: intel.gpu.fractionalresources
   # generic rule for older and upcoming devices
   - labelsTemplate: |
       {{"{{"}} range .pci.device {{"}}"}}gpu.intel.com/device-id.{{"{{"}} .class {{"}}"}}-{{"{{"}} .device {{"}}"}}.present=true
@@ -252,5 +242,10 @@ spec:
           - "5695"
           - "56b1"
           - "56b0"
+          - "56a2"
+          - "56ba"
+          - "56bc"
+          - "56bd"
+          - "56bb"
     name: intel.gpu.a.series
 {{- end }}

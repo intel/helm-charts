@@ -1,0 +1,15 @@
+name: npudeviceplugin-sample
+
+image:
+  hub: intel
+  tag: ""
+
+sharedDevNum: 1
+logLevel: 2
+
+nodeSelector:
+  intel.feature.node.kubernetes.io/npu: 'true'
+
+tolerations: []
+
+nodeFeatureRule: true

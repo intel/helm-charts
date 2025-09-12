@@ -114,6 +114,7 @@ rules:
   - fpgadeviceplugins
   - gpudeviceplugins
   - iaadeviceplugins
+  - npudeviceplugins
   - qatdeviceplugins
   - sgxdeviceplugins
   verbs:

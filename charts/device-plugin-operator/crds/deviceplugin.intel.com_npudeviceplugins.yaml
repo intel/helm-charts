@@ -4,14 +4,14 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.18.0
-  name: gpudeviceplugins.deviceplugin.intel.com
+  name: npudeviceplugins.deviceplugin.intel.com
 spec:
   group: deviceplugin.intel.com
   names:
-    kind: GpuDevicePlugin
-    listKind: GpuDevicePluginList
-    plural: gpudeviceplugins
-    singular: gpudeviceplugin
+    kind: NpuDevicePlugin
+    listKind: NpuDevicePluginList
+    plural: npudeviceplugins
+    singular: npudeviceplugin
   scope: Cluster
   versions:
   - additionalPrinterColumns:
@@ -31,8 +31,8 @@ spec:
     schema:
       openAPIV3Schema:
         description: |-
-          GpuDevicePlugin is the Schema for the gpudeviceplugins API. It represents
-          the GPU device plugin responsible for advertising Intel GPU hardware resources to
+          NpuDevicePlugin is the Schema for the npudeviceplugins API. It represents
+          the NPU device plugin responsible for advertising Intel NPU hardware resources to
           the kubelet.
         properties:
           apiVersion:
@@ -53,33 +53,10 @@ spec:
           metadata:
             type: object
           spec:
-            description: GpuDevicePluginSpec defines the desired state of GpuDevicePlugin.
+            description: NpuDevicePluginSpec defines the desired state of NpuDevicePlugin.
             properties:
-              allowIDs:
-                description: |-
-                  AllowIDs is a comma-separated list of PCI IDs of GPU devices that should only be advertised by the plugin.
-                  If not set, all devices are advertised.
-                  The list can contain IDs in the form of '0x1234,0x49a4,0x50b4'.
-                  Cannot be used together with DenyIDs.
-                type: string
-              denyIDs:
-                description: |-
-                  DenyIDs is a comma-separated list of PCI IDs of GPU devices that should only be denied by the plugin.
-                  If not set, all devices are advertised.
-                  The list can contain IDs in the form of '0x1234,0x49a4,0x50b4'.
-                  Cannot be used together with AllowIDs.
-                type: string
-              enableMonitoring:
-                description: |-
-                  EnableMonitoring enables the monitoring resource ('i915_monitoring')
-                  which gives access to all GPU devices on given node. Typically used with Intel XPU-Manager.
-                type: boolean
               image:
-                description: Image is a container image with GPU device plugin executable.
-                type: string
-              initImage:
-                description: InitImage is a container image with tools (e.g., GPU
-                  NFD source hook) installed on each node.
+                description: Image is a container image with NPU device plugin executable.
                 type: string
               logLevel:
                 description: LogLevel sets the plugin's log level.
@@ -91,18 +68,9 @@ spec:
                 description: NodeSelector provides a simple way to constrain device
                   plugin pods to nodes with particular labels.
                 type: object
-              preferredAllocationPolicy:
-                description: |-
-                  PreferredAllocationPolicy sets the mode of allocating GPU devices on a node.
-                  See documentation for detailed description of the policies. Only valid when SharedDevNum > 1 is set.
-                enum:
-                - balanced
-                - packed
-                - none
-                type: string
               sharedDevNum:
                 description: SharedDevNum is a number of containers that can share
-                  the same GPU device.
+                  the same NPU device.
                 minimum: 1
                 type: integer
               tolerations:
@@ -148,7 +116,7 @@ spec:
                 type: array
             type: object
           status:
-            description: GpuDevicePluginStatus defines the observed state of GpuDevicePlugin.
+            description: NpuDevicePluginStatus defines the observed state of NpuDevicePlugin.
             properties:
               controlledDaemonSet:
                 description: ControlledDaemoSet references the DaemonSet controlled

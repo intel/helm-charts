@@ -11,9 +11,10 @@ initImage:
 
 sharedDevNum: 1
 logLevel: 2
-resourceManager: false
 enableMonitoring: true
 allocationPolicy: "none"
+allowIDs: ""
+denyIDs: ""
 
 nodeSelector:
   intel.feature.node.kubernetes.io/gpu: 'true'

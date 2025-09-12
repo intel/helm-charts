@@ -9,9 +9,7 @@ manager:
 
   # supported devices by the operator
   devices:
-    # dlb: true
     # dsa: true
-    # fpga: true
     # gpu: true
     # iaa: true
     # qat: true
