@@ -1836,6 +1836,16 @@ entries:
   intel-device-plugins-operator:
   - apiVersion: v2
     appVersion: 0.34.0
+    created: "2025-09-24T05:21:59.171994503Z"
+    description: A Helm chart for Intel Device Plugins Operator for Kubernetes
+    digest: b2e4a7eaf55fd5d17f60d07bf4e78eb494efffbc9d730161f2cfe6b894f7dc07
+    name: intel-device-plugins-operator
+    type: application
+    urls:
+    - https://github.com/intel/helm-charts/releases/download/intel-device-plugins-operator-0.34.1-helm.0/intel-device-plugins-operator-0.34.1-helm.0.tgz
+    version: 0.34.1-helm.0
+  - apiVersion: v2
+    appVersion: 0.34.0
     created: "2025-09-12T15:09:25.749753139Z"
     description: A Helm chart for Intel Device Plugins Operator for Kubernetes
     digest: bf82b15d32cd8e7c9d7b3c1866ed18a358d6308f940c726a8caef92e35f3129d
@@ -3049,4 +3059,4 @@ entries:
     urls:
     - https://github.com/intel/helm-charts/releases/download/vault-0.8.0/vault-0.8.0.tgz
     version: 0.8.0
-generated: "2025-09-12T15:09:26.043218244Z"
+generated: "2025-09-24T05:21:59.172441773Z"
