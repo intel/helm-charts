@@ -43,4 +43,5 @@ You may also run `helm show values` on this chart's dependencies for additional 
 | `allocationPolicy` | `none` |
 | `allowIDs` | `` |
 | `denyIDs`  | `` |
+| `bypathMode`  | `single` |
 | `logLevel` | `2` |

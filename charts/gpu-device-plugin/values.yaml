@@ -15,6 +15,7 @@ enableMonitoring: true
 allocationPolicy: "none"
 allowIDs: ""
 denyIDs: ""
+bypathMode: single
 
 nodeSelector:
   intel.feature.node.kubernetes.io/gpu: 'true'

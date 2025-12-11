@@ -19,6 +19,7 @@ spec:
   preferredAllocationPolicy: {{ .Values.allocationPolicy }}
   allowIDs: {{ .Values.allowIDs | quote }}
   denyIDs: {{ .Values.denyIDs | quote }}
+  bypathMode: {{ .Values.bypathMode }}
 
   nodeSelector: {{- .Values.nodeSelector | toYaml | nindent 4 }}
   tolerations: {{- .Values.tolerations | toYaml | nindent 4 }}
