@@ -8,6 +8,7 @@ initImage:
   hub: intel
   tag: ""
 
+driver: idxd
 sharedDevNum: 10
 logLevel: 4
 

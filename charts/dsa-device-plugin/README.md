@@ -37,6 +37,7 @@ You may also run `helm show values` on this chart's dependencies for additional 
 | `image.tag` | `` |
 | `initImage.hub` | `intel` |
 | `initImage.tag` | `` |
+| `driver` | `idxd` |
 | `sharedDevNum` | `10` |
 | `logLevel` | `4` |
 | `tolerations` | `` |

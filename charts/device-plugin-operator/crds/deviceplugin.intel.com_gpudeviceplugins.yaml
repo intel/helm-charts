@@ -64,7 +64,7 @@ spec:
                 type: string
               bypathMode:
                 description: |-
-                  ByPathMode changes how plugin handles the DRM by-path/ directory mounting for GPU devices.
+                  ByPathMode changes how plugin handles the DRM by-path/-dir mounting for GPU devices.
                   See GPU plugin documentation for detailed description of the modes.
                   If left empty, it defaults to 'single'.
                 enum:
