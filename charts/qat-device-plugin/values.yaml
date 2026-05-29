@@ -18,6 +18,6 @@ logLevel: 4
 nodeSelector:
   intel.feature.node.kubernetes.io/qat: 'true'
 
-tolerations:
+tolerations: []
 
 nodeFeatureRule: true
