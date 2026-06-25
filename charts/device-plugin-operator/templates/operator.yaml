@@ -291,6 +291,12 @@ kind: Deployment
 metadata:
   labels:
     control-plane: controller-manager
+    {{- if .Values.manager.labels }}{{- toYaml .Values.manager.labels | nindent 4}}{{- end }}
+
+  {{- if .Values.manager.annotations}}
+  annotations:
+    {{- .Values.manager.annotations | toYaml | nindent 4}}
+  {{- end}}
   name: inteldeviceplugins-controller-manager
   namespace: {{ .Release.Namespace | quote }}
 spec:
@@ -298,10 +304,16 @@ spec:
   selector:
     matchLabels:
       control-plane: controller-manager
+      {{- if .Values.manager.labels }}{{- toYaml .Values.manager.labels | nindent 6}}{{- end }}
   template:
     metadata:
       labels:
         control-plane: controller-manager
+        {{- if .Values.manager.labels }}{{- toYaml .Values.manager.labels | nindent 8}}{{- end }}
+      {{- if .Values.manager.annotations}}
+      annotations:
+        {{- .Values.manager.annotations | toYaml | nindent 8}}
+      {{- end}}
     spec:
       {{- if .Values.privateRegistry.registrySecret }}
       imagePullSecrets:
@@ -349,6 +361,7 @@ spec:
           initialDelaySeconds: 5
           periodSeconds: 10
         name: manager
+        priorityClassName: {{ .Values.manager.priorityClassName }}
         ports:
         - containerPort: 9443
           name: webhook-server
