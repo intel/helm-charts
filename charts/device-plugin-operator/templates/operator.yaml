@@ -267,6 +267,9 @@ spec:
         {{- end }}
         {{- end }}
         env:
+        {{- with .Values.manager.extraEnv }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
         - name: DEVICEPLUGIN_NAMESPACE
           valueFrom:
             fieldRef:
