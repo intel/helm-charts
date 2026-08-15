@@ -330,6 +330,9 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
+        {{- with .Values.manager.extraEnv }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
         {{- if .Values.privateRegistry.registrySecret }}
         - name: DEVICEPLUGIN_SECRET
           value: {{ .Release.Name }}-operator-private-registry
