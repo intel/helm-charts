@@ -51,10 +51,10 @@ You may also run `helm show values` on this chart's dependencies for additional 
 | `privateRegistry.registrySecret` | `` |
 | `pullPolicy` | `IfNotPresent` |
 
-Defining `manager.devices` with a name-bool dictionary allows enabling only certain devices. The following will enable only fpga and gpu devices:
+Defining `manager.devices` with a name-bool dictionary allows enabling only certain devices. The following will enable only qat and gpu devices:
 ```
 manager:
   devices:
-    fpga: true
+    qat: true
     gpu: true
 ```
