@@ -514,6 +514,8 @@ webhooks:
     resources:
     - sgxdeviceplugins
   sideEffects: None
+{{- $devices := .Values.manager.devices | default dict }}
+{{- if or (empty $devices) (index $devices "sgx") }}
 - admissionReviewVersions:
   - v1
   clientConfig:
@@ -534,6 +536,7 @@ webhooks:
     resources:
     - pods
   sideEffects: None
+{{- end }}
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
