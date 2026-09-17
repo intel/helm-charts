@@ -109,9 +109,7 @@ rules:
 - apiGroups:
   - deviceplugin.intel.com
   resources:
-  - dlbdeviceplugins
   - dsadeviceplugins
-  - fpgadeviceplugins
   - gpudeviceplugins
   - iaadeviceplugins
   - npudeviceplugins
@@ -128,9 +126,7 @@ rules:
 - apiGroups:
   - deviceplugin.intel.com
   resources:
-  - dlbdeviceplugins/finalizers
   - dsadeviceplugins/finalizers
-  - fpgadeviceplugins/finalizers
   - gpudeviceplugins/finalizers
   - iaadeviceplugins/finalizers
   - qatdeviceplugins/finalizers
@@ -141,9 +137,7 @@ rules:
 - apiGroups:
   - deviceplugin.intel.com
   resources:
-  - dlbdeviceplugins/status
   - dsadeviceplugins/status
-  - fpgadeviceplugins/status
   - gpudeviceplugins/status
   - iaadeviceplugins/status
   - qatdeviceplugins/status
@@ -153,15 +147,6 @@ rules:
   - get
   - patch
   - update
-- apiGroups:
-  - fpga.intel.com
-  resources:
-  - acceleratorfunctions
-  - fpgaregions
-  verbs:
-  - get
-  - list
-  - watch
 - apiGroups:
   - rbac.authorization.k8s.io
   resources:
@@ -415,26 +400,6 @@ webhooks:
     service:
       name: inteldeviceplugins-webhook-service
       namespace: {{ .Release.Namespace | quote }}
-      path: /mutate-deviceplugin-intel-com-v1-dlbdeviceplugin
-  failurePolicy: Fail
-  name: mdlbdeviceplugin.kb.io
-  rules:
-  - apiGroups:
-    - deviceplugin.intel.com
-    apiVersions:
-    - v1
-    operations:
-    - CREATE
-    - UPDATE
-    resources:
-    - dlbdeviceplugins
-  sideEffects: None
-- admissionReviewVersions:
-  - v1
-  clientConfig:
-    service:
-      name: inteldeviceplugins-webhook-service
-      namespace: {{ .Release.Namespace | quote }}
       path: /mutate-deviceplugin-intel-com-v1-dsadeviceplugin
   failurePolicy: Fail
   name: mdsadeviceplugin.kb.io
@@ -448,26 +413,6 @@ webhooks:
     - UPDATE
     resources:
     - dsadeviceplugins
-  sideEffects: None
-- admissionReviewVersions:
-  - v1
-  clientConfig:
-    service:
-      name: inteldeviceplugins-webhook-service
-      namespace: {{ .Release.Namespace | quote }}
-      path: /mutate-deviceplugin-intel-com-v1-fpgadeviceplugin
-  failurePolicy: Fail
-  name: mfpgadeviceplugin.kb.io
-  rules:
-  - apiGroups:
-    - deviceplugin.intel.com
-    apiVersions:
-    - v1
-    operations:
-    - CREATE
-    - UPDATE
-    resources:
-    - fpgadeviceplugins
   sideEffects: None
 - admissionReviewVersions:
   - v1
@@ -575,25 +520,6 @@ webhooks:
     service:
       name: inteldeviceplugins-webhook-service
       namespace: {{ .Release.Namespace | quote }}
-      path: /pods
-  failurePolicy: Ignore
-  name: fpga.mutator.webhooks.intel.com
-  rules:
-  - apiGroups:
-    - ""
-    apiVersions:
-    - v1
-    operations:
-    - CREATE
-    resources:
-    - pods
-  sideEffects: None
-- admissionReviewVersions:
-  - v1
-  clientConfig:
-    service:
-      name: inteldeviceplugins-webhook-service
-      namespace: {{ .Release.Namespace | quote }}
       path: /mutate--v1-pod
   failurePolicy: Ignore
   name: sgx.mutator.webhooks.intel.com
@@ -622,26 +548,6 @@ webhooks:
     service:
       name: inteldeviceplugins-webhook-service
       namespace: {{ .Release.Namespace | quote }}
-      path: /validate-deviceplugin-intel-com-v1-dlbdeviceplugin
-  failurePolicy: Fail
-  name: vdlbdeviceplugin.kb.io
-  rules:
-  - apiGroups:
-    - deviceplugin.intel.com
-    apiVersions:
-    - v1
-    operations:
-    - CREATE
-    - UPDATE
-    resources:
-    - dlbdeviceplugins
-  sideEffects: None
-- admissionReviewVersions:
-  - v1
-  clientConfig:
-    service:
-      name: inteldeviceplugins-webhook-service
-      namespace: {{ .Release.Namespace | quote }}
       path: /validate-deviceplugin-intel-com-v1-dsadeviceplugin
   failurePolicy: Fail
   name: vdsadeviceplugin.kb.io
@@ -655,26 +561,6 @@ webhooks:
     - UPDATE
     resources:
     - dsadeviceplugins
-  sideEffects: None
-- admissionReviewVersions:
-  - v1
-  clientConfig:
-    service:
-      name: inteldeviceplugins-webhook-service
-      namespace: {{ .Release.Namespace | quote }}
-      path: /validate-deviceplugin-intel-com-v1-fpgadeviceplugin
-  failurePolicy: Fail
-  name: vfpgadeviceplugin.kb.io
-  rules:
-  - apiGroups:
-    - deviceplugin.intel.com
-    apiVersions:
-    - v1
-    operations:
-    - CREATE
-    - UPDATE
-    resources:
-    - fpgadeviceplugins
   sideEffects: None
 - admissionReviewVersions:
   - v1
