@@ -1,3 +1,15 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: inteldeviceplugins-controller-manager
+  namespace: {{ .Release.Namespace | quote }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: inteldeviceplugins-plugin
+  namespace: {{ .Release.Namespace | quote }}
+---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
@@ -5,28 +17,20 @@ metadata:
   namespace: {{ .Release.Namespace | quote }}
 rules:
 - apiGroups:
-  - ""
-  resources:
-  - configmaps
-  verbs:
-  - get
-  - list
-  - watch
-  - create
-  - update
-  - patch
-  - delete
-- apiGroups:
   - coordination.k8s.io
   resources:
   - leases
   verbs:
+  - create
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  resourceNames:
+  - d1c7b6d5.intel.com
+  verbs:
   - get
-  - list
-  - watch
   - update
-  - patch
-  - delete
 - apiGroups:
   - ""
   resources:
@@ -39,73 +43,8 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   creationTimestamp: null
-  name: inteldeviceplugins-gpu-manager-role
-rules:
-- apiGroups:
-  - ""
-  resources:
-  - pods
-  verbs:
-  - list
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  creationTimestamp: null
   name: inteldeviceplugins-manager-role
 rules:
-- apiGroups:
-  - ""
-  resources:
-  - nodes/proxy
-  verbs:
-  - get
-  - list
-- apiGroups:
-  - ""
-  resources:
-  - pods
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - ""
-  resources:
-  - serviceaccounts
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - watch
-- apiGroups:
-  - apps
-  resources:
-  - daemonsets
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - coordination.k8s.io
-  resources:
-  - leases
-  verbs:
-  - create
-- apiGroups:
-  - coordination.k8s.io
-  resourceNames:
-  - d1c7b6d5.intel.com
-  resources:
-  - leases
-  verbs:
-  - get
-  - update
 - apiGroups:
   - deviceplugin.intel.com
   resources:
@@ -116,11 +55,8 @@ rules:
   - qatdeviceplugins
   - sgxdeviceplugins
   verbs:
-  - create
-  - delete
   - get
   - list
-  - patch
   - update
   - watch
 - apiGroups:
@@ -129,9 +65,9 @@ rules:
   - dsadeviceplugins/finalizers
   - gpudeviceplugins/finalizers
   - iaadeviceplugins/finalizers
+  - npudeviceplugins/finalizers
   - qatdeviceplugins/finalizers
   - sgxdeviceplugins/finalizers
-  - npudeviceplugins/finalizers
   verbs:
   - update
 - apiGroups:
@@ -140,31 +76,37 @@ rules:
   - dsadeviceplugins/status
   - gpudeviceplugins/status
   - iaadeviceplugins/status
+  - npudeviceplugins/status
   - qatdeviceplugins/status
   - sgxdeviceplugins/status
-  - npudeviceplugins/status
   verbs:
   - get
-  - patch
   - update
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: inteldeviceplugins-manager-role
+  namespace: {{ .Release.Namespace | quote }}
+rules:
 - apiGroups:
-  - rbac.authorization.k8s.io
+  - ""
   resources:
-  - clusterrolebindings
+  - pods
   verbs:
-  - create
-  - delete
   - get
   - list
   - watch
 - apiGroups:
-  - security.openshift.io
-  resourceNames:
-  - privileged
+  - apps
   resources:
-  - securitycontextconstraints
+  - daemonsets
   verbs:
-  - use
+  - create
+  - get
+  - list
+  - update
+  - watch
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -205,7 +147,7 @@ roleRef:
   name: inteldeviceplugins-leader-election-role
 subjects:
 - kind: ServiceAccount
-  name: default
+  name: inteldeviceplugins-controller-manager
   namespace: {{ .Release.Namespace | quote }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -218,7 +160,21 @@ roleRef:
   name: inteldeviceplugins-manager-role
 subjects:
 - kind: ServiceAccount
-  name: default
+  name: inteldeviceplugins-controller-manager
+  namespace: {{ .Release.Namespace | quote }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: inteldeviceplugins-manager-rolebinding
+  namespace: {{ .Release.Namespace | quote }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: inteldeviceplugins-manager-role
+subjects:
+- kind: ServiceAccount
+  name: inteldeviceplugins-controller-manager
   namespace: {{ .Release.Namespace | quote }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -231,7 +187,7 @@ roleRef:
   name: inteldeviceplugins-auth-role
 subjects:
 - kind: ServiceAccount
-  name: default
+  name: inteldeviceplugins-controller-manager
   namespace: {{ .Release.Namespace | quote }}
 ---
 apiVersion: v1
@@ -315,6 +271,8 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
+        - name: DEVICEPLUGIN_SERVICEACCOUNT
+          value: inteldeviceplugins-plugin
         {{- if .Values.privateRegistry.registrySecret }}
         - name: DEVICEPLUGIN_SECRET
           value: {{ .Release.Name }}-operator-private-registry
@@ -356,7 +314,7 @@ spec:
           name: cert
           readOnly: true
       nodeSelector: {{- .Values.nodeSelector | toYaml | nindent 8 }}
-      serviceAccountName: default
+      serviceAccountName: inteldeviceplugins-controller-manager
       terminationGracePeriodSeconds: 10
       volumes:
       - name: cert
