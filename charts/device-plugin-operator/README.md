@@ -45,6 +45,7 @@ You may also run `helm show values` on this chart's dependencies for additional 
 |---------|-----------|
 | `manager.image.hub` | `intel` |
 | `manager.image.tag` | `` |
+| `manager.extraEnv` | `[]` |
 | `manager.devices` | `` |
 | `privateRegistry.registryUrl` | `` |
 | `privateRegistry.registryUser` | `` |
