@@ -4,8 +4,5 @@
 *                   @softwarerecipes @vagheshp
 
 # charts
-/charts/device-plugin-operator/  @mythi @poussa
-/charts/gpu-device-plugin/  @mythi @poussa
-/charts/qat-device-plugin/ @mythi @poussa
-/charts/sgx-device-plugin/ @mythi @poussa
-
+/charts/device-plugin-operator/  @mythi @tkatila
+/charts/*-device-plugin/  @mythi @tkatila
