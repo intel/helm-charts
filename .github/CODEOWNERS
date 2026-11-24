@@ -9,3 +9,4 @@
 /charts/qat-device-plugin/ @mythi @poussa
 /charts/sgx-device-plugin/ @mythi @poussa
 
+/charts/cpu-pinning-operator/  @kwisniewski98

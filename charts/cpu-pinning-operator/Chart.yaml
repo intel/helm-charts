@@ -1,0 +1,44 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+apiVersion: v2
+name: cpu-pinning-operator
+description: >-
+  A Kubernetes operator that pins CPU cores for AI inference workloads onto
+  dedicated, NUMA-aware cpusets using NRI balloons
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - nri
+  - balloons
+  - cpu-pinning
+  - kubernetes
+  - operator
+
+# Chart icon, inlined as a data URI because the field has to hold an absolute URL
+# and this repository publishes no separately fetchable asset. The image is a
+# 64x64 SVG: four rounded squares on a blue tile, two of them at full opacity.
+icon: data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTAiIGZpbGw9IiMwMDY4YjUiLz48ZyBmaWxsPSIjZmZmZmZmIj48cmVjdCB4PSIxMiIgeT0iMTIiIHdpZHRoPSIxNyIgaGVpZ2h0PSIxNyIgcng9IjMiLz48cmVjdCB4PSIzNSIgeT0iMzUiIHdpZHRoPSIxNyIgaGVpZ2h0PSIxNyIgcng9IjMiLz48cmVjdCB4PSIzNSIgeT0iMTIiIHdpZHRoPSIxNyIgaGVpZ2h0PSIxNyIgcng9IjMiIG9wYWNpdHk9IjAuNCIvPjxyZWN0IHg9IjEyIiB5PSIzNSIgd2lkdGg9IjE3IiBoZWlnaHQ9IjE3IiByeD0iMyIgb3BhY2l0eT0iMC40Ii8+PC9nPjwvc3ZnPg==
+maintainers:
+  - name: Intel Corporation
+sources:
+  - https://github.com/intel/cpu-pinning-operator
+annotations:
+  artifacthub.io/license: Apache-2.0
+
+# Prerequisite subcharts, condition gated. Defaults live in values.yaml and differ:
+# cert-manager is OFF, the NRI balloons plugin is ON. Both are usually installed
+# once cluster-wide and a second copy from this chart would collide, so on a cluster
+# that already runs one, disable it. Both archives are committed under charts/, so no
+# `helm dependency update` is needed before install and no version here may change
+# without replacing the archive next to it (see charts/ and Chart.lock).
+dependencies:
+  - name: cert-manager
+    version: "v1.20.3"
+    repository: "https://charts.jetstack.io"
+    condition: cert-manager.enabled
+  - name: nri-resource-policy-balloons
+    version: "v0.15.2"
+    repository: "https://containers.github.io/nri-plugins"
+    condition: nri-resource-policy-balloons.enabled

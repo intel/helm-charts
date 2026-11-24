@@ -1,0 +1,258 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+# Minimal uninstall hooks for a clean `helm uninstall` under the
+# ownerReference-GC cleanup model. Two teardown steps Kubernetes garbage
+# collection cannot do on its own, split across two hook phases because they have
+# opposite timing requirements relative to the manager Deployment:
+#
+#   1. PRE-DELETE — delete the BalloonPinningPolicy guard's
+#      ValidatingWebhookConfiguration. Helm's uninstall order deletes the manager
+#      Deployment (a known kind) before the unknown-kind BalloonPinningPolicy and
+#      ValidatingWebhookConfiguration, so by the time Helm deletes the chart-owned
+#      default policy the guard webhook backend is down but its config
+#      (failurePolicy: Fail) is still registered — which would deny the DELETE and
+#      make `helm uninstall` exit non-zero on the first try. This MUST run
+#      pre-delete, before Helm deletes the release resources, so the guard config
+#      is gone before the chart-owned default policy DELETE. (The per-node
+#      BalloonsPolicy CRs themselves are GC'd via their ownerReference to the
+#      chart-owned, cluster-scoped BalloonsClusterConfig singleton the uninstall
+#      deletes — a cluster-scoped owner owning a namespaced dependent is
+#      explicitly permitted by GC.)
+#
+#   2. POST-DELETE — strip the operator-managed node labels. GC cannot remove
+#      label KEYS from Node objects, so this hook does it explicitly. This MUST
+#      run post-delete, after Helm has deleted the manager Deployment: a
+#      pre-delete strip races the still-running NodeReconciler, which immediately
+#      re-labels any node the strip touched in the window before the manager is
+#      torn down, so the labels reappear. With the manager gone, nothing re-labels
+#      the node and the strip holds.
+#
+# Each hook runs with its own narrowly-scoped, hook-only ServiceAccount +
+# ClusterRole: the pre-delete grant is delete on the one named
+# validatingwebhookconfiguration only; the post-delete grant is list/patch on
+# nodes only. The Jobs and their RBAC are removed after they run
+# (hook-delete-policy). No finalizer, no blocking wait, no BalloonsClusterConfig
+# coordination.
+#
+# Manual equivalent (if you skip the hooks, or clean up out-of-band):
+#   kubectl delete validatingwebhookconfiguration \
+#     <release>-cpu-pinning-operator-validating-webhook --ignore-not-found
+#   # after the manager Deployment is gone:
+#   for l in balloons-enabled max-span numa-nodes physical-cpus threads-per-core \
+#            memory-per-numa-bytes package-topology amx node-class reserved-cpus \
+#            cpu-allocation cpu-manager-conflict; do
+#     kubectl label nodes --all "cpu-pinning-operator.intel.com/$l-" 2>/dev/null || true
+#   done
+{{- if .Values.rbac.create }}
+{{- if .Values.preDeleteHook.enabled }}
+#
+# ---------------------------------------------------------------------------
+# PRE-DELETE: guard webhook-config teardown (runs while the manager is still up).
+# ---------------------------------------------------------------------------
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "cpu-pinning-operator.fullname" . }}-pre-delete
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "cpu-pinning-operator.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-delete
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded,hook-failed
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "cpu-pinning-operator.fullname" . }}-pre-delete
+  labels:
+    {{- include "cpu-pinning-operator.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-delete
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded,hook-failed
+# Only what the pre-delete step needs: delete THE ONE webhook configuration whose
+# name it is handed in VALIDATING_WEBHOOK_CONFIG_NAME, so resourceNames pins the
+# grant to exactly that object rather than every ValidatingWebhookConfiguration in
+# the cluster. The hook never reads it first (a not-found delete is tolerated), so
+# there is no get grant. The node-label sweep moved to the post-delete hook below.
+rules:
+  - apiGroups: ["admissionregistration.k8s.io"]
+    resources: ["validatingwebhookconfigurations"]
+    resourceNames:
+      - {{ include "cpu-pinning-operator.fullname" . }}-{{ .Values.webhook.validatingWebhookConfiguration.name }}
+    verbs: ["delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "cpu-pinning-operator.fullname" . }}-pre-delete
+  labels:
+    {{- include "cpu-pinning-operator.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-delete
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded,hook-failed
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "cpu-pinning-operator.fullname" . }}-pre-delete
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "cpu-pinning-operator.fullname" . }}-pre-delete
+    namespace: {{ .Release.Namespace }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "cpu-pinning-operator.fullname" . }}-pre-delete
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "cpu-pinning-operator.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-delete
+    # Runs AFTER the RBAC above (higher weight).
+    "helm.sh/hook-weight": "0"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded,hook-failed
+spec:
+  backoffLimit: 2
+  # Bound the run so a stuck hook can't block the uninstall indefinitely.
+  activeDeadlineSeconds: 120
+  template:
+    metadata:
+      labels:
+        {{- include "cpu-pinning-operator.selectorLabels" . | nindent 8 }}
+    spec:
+      restartPolicy: Never
+      serviceAccountName: {{ include "cpu-pinning-operator.fullname" . }}-pre-delete
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: pre-delete
+          image: {{ include "cpu-pinning-operator.image" . | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - /manager
+          args:
+            - pre-delete
+          env:
+            # The guard's ValidatingWebhookConfiguration name the hook deletes so
+            # the chart-owned default BalloonPinningPolicy can be removed without
+            # the (unreachable, failurePolicy:Fail) guard webhook denying it.
+            - name: VALIDATING_WEBHOOK_CONFIG_NAME
+              value: {{ include "cpu-pinning-operator.fullname" . }}-{{ .Values.webhook.validatingWebhookConfiguration.name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 128Mi
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+---
+#
+# ---------------------------------------------------------------------------
+# POST-DELETE: node-label strip (runs after the manager Deployment is deleted).
+# ---------------------------------------------------------------------------
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "cpu-pinning-operator.fullname" . }}-post-delete
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "cpu-pinning-operator.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": post-delete
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded,hook-failed
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "cpu-pinning-operator.fullname" . }}-post-delete
+  labels:
+    {{- include "cpu-pinning-operator.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": post-delete
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded,hook-failed
+# Only what the post-delete step needs: list/patch nodes to drop the
+# operator-managed labels. No delete of nodes, no other resources.
+rules:
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["list", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "cpu-pinning-operator.fullname" . }}-post-delete
+  labels:
+    {{- include "cpu-pinning-operator.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": post-delete
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded,hook-failed
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "cpu-pinning-operator.fullname" . }}-post-delete
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "cpu-pinning-operator.fullname" . }}-post-delete
+    namespace: {{ .Release.Namespace }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "cpu-pinning-operator.fullname" . }}-post-delete
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "cpu-pinning-operator.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": post-delete
+    # Runs AFTER the RBAC above (higher weight).
+    "helm.sh/hook-weight": "0"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded,hook-failed
+spec:
+  backoffLimit: 2
+  # Bound the run so a stuck hook can't block the uninstall indefinitely.
+  activeDeadlineSeconds: 120
+  template:
+    metadata:
+      labels:
+        {{- include "cpu-pinning-operator.selectorLabels" . | nindent 8 }}
+    spec:
+      restartPolicy: Never
+      serviceAccountName: {{ include "cpu-pinning-operator.fullname" . }}-post-delete
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: post-delete
+          image: {{ include "cpu-pinning-operator.image" . | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - /manager
+          args:
+            - post-delete
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 128Mi
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}
+{{- end }}

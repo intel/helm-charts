@@ -1,0 +1,41 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: {{ include "cpu-pinning-operator.fullname" . }}-{{ .Values.webhook.mutatingWebhookConfiguration.name }}
+  {{- if .Values.certManager.enabled }}
+  annotations:
+    cert-manager.io/inject-ca-from: {{ .Release.Namespace }}/{{ include "cpu-pinning-operator.fullname" . }}-{{ .Values.certManager.certificate.name }}
+  {{- end }}
+  labels:
+    {{- include "cpu-pinning-operator.labels" . | nindent 4 }}
+webhooks:
+  - name: mpod.kb.io
+    clientConfig:
+      service:
+        name: {{ include "cpu-pinning-operator.fullname" . }}-{{ .Values.webhook.service.name }}
+        namespace: {{ .Release.Namespace }}
+        port: {{ .Values.webhook.service.port }}
+        path: "/mutate-v1-pod"
+      {{- if not .Values.certManager.enabled }}
+      caBundle: {{ include "cpu-pinning-operator.webhookCABundle" . }}
+      {{- end }}
+    rules:
+      - operations: ["CREATE"]
+        apiGroups: [""]
+        apiVersions: ["v1"]
+        resources: ["pods"]
+    # Bootstrap namespaceSelector. The BalloonPinningPolicy reconciler overwrites
+    # this at runtime from the union of the policies' namespaces (exact names,
+    # globs, and label-selector matches all resolved to concrete names); this
+    # static value only scopes the brief window before the first reconcile.
+    # Default: exact-name mode via kubernetes.io/metadata.name. Set
+    # webhook.namespaceSelector to opt into label-based bootstrap targeting.
+    namespaceSelector:
+      {{- include "cpu-pinning-operator.webhookNamespaceSelector" . | trim | nindent 6 }}
+    admissionReviewVersions: ["v1"]
+    sideEffects: None
+    timeoutSeconds: {{ .Values.webhook.mutatingWebhookConfiguration.timeoutSeconds }}
+    failurePolicy: {{ .Values.webhook.mutatingWebhookConfiguration.failurePolicy }}

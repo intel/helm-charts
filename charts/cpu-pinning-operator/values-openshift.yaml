@@ -1,0 +1,52 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+#
+# OpenShift / OKD install overlay. A clean `helm install` of this chart fails on
+# OpenShift without the SecurityContextConstraints (SCC) grants this overlay
+# turns on (verified failing on OCP 4.22, restricted SCC). Install with:
+#
+#   helm install cpu-pinning-operator ./deploy/cpu-pinning-operator \
+#     -n cpu-pinning-operator-system --create-namespace \
+#     -f ./deploy/cpu-pinning-operator/values-openshift.yaml \
+#     --set 'balloonPinningPolicy.match.byContainerName={vllm}' \
+#     --set 'balloonPinningPolicy.namespaces={inference}'
+#
+# This overlay flips the OpenShift-specific knobs and scopes the reserved CPU pool
+# for a shared worker. It sets no policy target: the two --set lines (or your own
+# -f) are required, as for any install. Layer replica count etc. on top the same way. The image defaults to docker.io/intel/cpu-pinning-operator; a
+# mirrored or disconnected cluster sets image.repository to its mirror.
+#
+# Two SCC settings, resolved by Helm at different phases:
+#   * openShift.enabled=true renders the topology-probe SCC + probe SA + probe RBAC.
+#   * nri-resource-policy-balloons.openshift.grant-scc=true renders the balloons
+#     subchart's own least-privilege SCC and the spc_t SELinux type its DaemonSet
+#     needs to write its hostPath cache under SELinux enforcing.
+#
+# Plus the reserved-pool block below, which is a behaviour change rather than a
+# permissions toggle.
+
+openShift:
+  enabled: true
+
+balloonsClusterConfig:
+  balloon:
+    # A shared OpenShift worker runs the platform (monitoring, logging, CNI, CSI)
+    # next to the workload, so the default "*" — which routes every unannotated pod
+    # onto the exclusive reserved pool — exhausts reserved and starves the balloons.
+    # The list is emitted verbatim as the plugin's reservedPoolNamespaces; the glob
+    # works because the plugin matches with filepath.Match (nri-plugins v0.15.2,
+    # pinned in Chart.yaml: cmd/plugins/balloons/policy/balloons-policy.go).
+    reservedNamespaces:
+      - "kube-system"
+      - "openshift-*"
+    # Platform pods still land on reserved, so size it from observed demand instead
+    # of the base chart's fixed 12. cpus must be dropped rather than overridden:
+    # Helm merges the block, and the API rejects a CR with both cpus and measured.
+    reserved:
+      cpus: null
+      measured: {}  # headroomPercent/min come from the CRD defaults (50, 4)
+
+nri-resource-policy-balloons:
+  enabled: true
+  openshift:
+    grant-scc: true

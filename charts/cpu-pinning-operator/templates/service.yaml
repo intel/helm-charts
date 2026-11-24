@@ -1,0 +1,42 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+{{- if .Values.metrics.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "cpu-pinning-operator.fullname" . }}-metrics
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "cpu-pinning-operator.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - port: {{ .Values.metrics.port }}
+      targetPort: metrics
+      protocol: TCP
+      name: metrics
+  selector:
+    {{- include "cpu-pinning-operator.selectorLabels" . | nindent 4 }}
+{{- end }}
+---
+# Per-node balloons-readiness endpoint. The injected wait-for-balloons init
+# container resolves this Service and polls GET /balloons/ready?node=<nodeName>
+# until the NRI balloons plugin pod on its node is Ready. Every manager replica
+# serves it (the Service load-balances across them), so any replica can answer.
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "cpu-pinning-operator.fullname" . }}-balloons-ready
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "cpu-pinning-operator.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - port: {{ .Values.balloonsReady.port }}
+      targetPort: balloons-ready
+      protocol: TCP
+      name: balloons-ready
+  selector:
+    {{- include "cpu-pinning-operator.selectorLabels" . | nindent 4 }}

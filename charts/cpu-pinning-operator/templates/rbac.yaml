@@ -1,0 +1,212 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+{{- if .Values.rbac.create }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "cpu-pinning-operator.fullname" . }}-manager-role
+  labels:
+    {{- include "cpu-pinning-operator.labels" . | nindent 4 }}
+rules:
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["get", "list", "watch", "patch"]
+  # pods: get/list/watch also backs the per-node balloons-readiness endpoint,
+  # which lists the balloons DaemonSet's pods to report whether the plugin pod on
+  # a given node is Ready. create/delete for the topology-probe pods are in the
+  # namespaced Role below, not here.
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get"]
+  # Drift policy "restart" evicts drifted pods via the eviction subresource.
+  - apiGroups: [""]
+    resources: ["pods/eviction"]
+    verbs: ["create"]
+  # namespaces: list-only. Glob/selector namespace patterns are expanded against
+  # the live namespace list; no namespace is ever fetched by name, so there is no
+  # get grant. list/watch back the cached client's Namespace informer.
+  - apiGroups: [""]
+    resources: ["namespaces"]
+    verbs: ["list", "watch"]
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["create", "patch"]
+  # Per-node Grafana canvas dashboards are written into ConfigMaps the Grafana
+  # sidecar imports (grafanaDashboard.enabled). The operator manages only its
+  # own dashboard ConfigMaps, with get/create/update/delete — it never patches
+  # one; list/watch back the cached client's ConfigMap informer. The same get also
+  # reads kubeadm's kube-system/kubelet-config, to learn whether the cluster's
+  # kubelets run the CPU Manager static policy — under which the kubelet allocates
+  # exclusive cpusets the balloons plugin also allocates, so the node is flagged
+  # (Event + cpu_pinning_cpu_manager_conflict + a CPUManagerCompatible condition)
+  # instead of silently pinned against. That check adds no grant of its own.
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list", "watch", "create", "update", "delete"]
+  # daemonsets: get only. The per-node balloons-readiness endpoint reads the
+  # balloons DaemonSet to learn its pod selector, then lists its pods to report
+  # whether the plugin pod on a given node is Ready. That read goes through the
+  # manager's uncached API reader, so no DaemonSet informer exists and no
+  # list/watch is issued. The init container polls this endpoint rather than
+  # calling the API server, so the operator creates no ServiceAccounts or
+  # ClusterRoleBindings at admission and needs no serviceaccounts/clusterrolebindings
+  # write grants.
+  - apiGroups: ["apps"]
+    resources: ["daemonsets"]
+    verbs: ["get"]
+  # leases: leader election only. The lock Gets, Creates and Updates the Lease and
+  # never patches or deletes it; list/watch back the webhook's cached read of the
+  # lease holder when it resolves the leader pod IP.
+  - apiGroups: ["coordination.k8s.io"]
+    resources: ["leases"]
+    verbs: ["get", "list", "watch", "create", "update"]
+  # balloonspolicies: the per-node CR is written with Server-Side Apply, which
+  # needs patch plus create (an apply that creates an object is authorized as
+  # patch AND create), and deleted when the node goes away. No plain update is
+  # ever issued.
+  - apiGroups: ["config.nri"]
+    resources: ["balloonspolicies"]
+    verbs: ["get", "list", "watch", "create", "patch", "delete"]
+  # The NRT metrics reconciler watches NodeResourceTopology CRs (published by
+  # the NRI balloons agent) to rebuild the per-CPU cpu_assignment metric.
+  - apiGroups: ["topology.node.k8s.io"]
+    resources: ["noderesourcetopologies"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["cpu-pinning-operator.intel.com"]
+    resources: ["balloonpinningpolicies"]
+    verbs: ["get", "list", "watch"]
+  # Status is published with a full Status().Update (a PUT on the subresource);
+  # nothing reads or patches /status, so update alone.
+  - apiGroups: ["cpu-pinning-operator.intel.com"]
+    resources: ["balloonpinningpolicies/status"]
+    verbs: ["update"]
+  # get/list/watch the singleton config: the BCC reconciler reads it and reports
+  # status; the Node reconciler Gets it to resolve the ownerReference it stamps
+  # on each per-node BalloonsPolicy CR (so Kubernetes GC reaps those CRs when the
+  # singleton is deleted on uninstall). No update/patch on the object itself —
+  # the ownerRef-GC cleanup model uses no finalizer.
+  - apiGroups: ["cpu-pinning-operator.intel.com"]
+    resources: ["balloonsclusterconfigs"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["cpu-pinning-operator.intel.com"]
+    resources: ["balloonsclusterconfigs/status"]
+    verbs: ["update"]
+  # The authenticated metrics endpoint (metrics.requireAuth) resolves each
+  # scraper's bearer token with a TokenReview and authorizes the resulting user
+  # for `get /metrics` with a SubjectAccessReview. Both are create-only review
+  # APIs: the verb is the request, nothing is persisted, and neither can read or
+  # change any other object. Granted unconditionally so the endpoint cannot be
+  # left requiring a check the manager is not allowed to perform — a denied
+  # review fails the scrape closed, which would look like an operator outage.
+  - apiGroups: ["authentication.k8s.io"]
+    resources: ["tokenreviews"]
+    verbs: ["create"]
+  - apiGroups: ["authorization.k8s.io"]
+    resources: ["subjectaccessreviews"]
+    verbs: ["create"]
+  # The reconcilers rewrite the webhook's namespaceSelector and failurePolicy with
+  # get + patch (not update; only "patch" is needed for read-modify-write via
+  # client.Patch — see KSV-0114). The read verbs stay unscoped: the readiness-CA
+  # reconciler watches the configuration through the cache, and list/watch cannot
+  # be restricted by name. patch is pinned to this release's own configuration,
+  # the name the manager is handed in WEBHOOK_CONFIG_NAME, so the operator cannot
+  # rewrite any other mutating webhook in the cluster.
+  - apiGroups: ["admissionregistration.k8s.io"]
+    resources: ["mutatingwebhookconfigurations"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["admissionregistration.k8s.io"]
+    resources: ["mutatingwebhookconfigurations"]
+    resourceNames:
+      - {{ include "cpu-pinning-operator.fullname" . }}-{{ .Values.webhook.mutatingWebhookConfiguration.name }}
+    verbs: ["patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "cpu-pinning-operator.fullname" . }}-manager-rolebinding
+  labels:
+    {{- include "cpu-pinning-operator.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "cpu-pinning-operator.fullname" . }}-manager-role
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "cpu-pinning-operator.serviceAccountName" . }}
+    namespace: {{ .Release.Namespace }}
+---
+# Topology-probe pods are created and deleted only in the manager's own namespace
+# (POD_NAMESPACE), so these verbs are namespaced: cluster-wide pod create would let
+# the manager start a pod under any ServiceAccount in any namespace.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "cpu-pinning-operator.fullname" . }}-probe-pods
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "cpu-pinning-operator.labels" . | nindent 4 }}
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["create", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "cpu-pinning-operator.fullname" . }}-probe-pods
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "cpu-pinning-operator.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "cpu-pinning-operator.fullname" . }}-probe-pods
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "cpu-pinning-operator.serviceAccountName" . }}
+    namespace: {{ .Release.Namespace }}
+{{- if and .Values.metrics.enabled .Values.metrics.secure .Values.metrics.requireAuth }}
+---
+# The scrape credential for the authenticated metrics endpoint: `get` on the
+# NON-RESOURCE URL /metrics, which is exactly the attribute the manager's
+# SubjectAccessReview asks about (verb = lowercased HTTP method, path = the URL).
+# It grants nothing else — a holder reads the metrics and not one API object — so
+# it is safe to bind to a scraper that must not see cluster state.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "cpu-pinning-operator.fullname" . }}-metrics-reader
+  labels:
+    {{- include "cpu-pinning-operator.labels" . | nindent 4 }}
+rules:
+  - nonResourceURLs: ["/metrics"]
+    verbs: ["get"]
+{{- with .Values.metrics.readers }}
+---
+# metrics.readers: the ServiceAccounts allowed to scrape. Prometheus presents its
+# own SA token (the ServiceMonitor's bearerTokenFile), so ITS ServiceAccount is
+# what belongs here — unlisted means 403, which shows up as an empty dashboard
+# rather than a failed install.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "cpu-pinning-operator.fullname" $ }}-metrics-reader
+  labels:
+    {{- include "cpu-pinning-operator.labels" $ | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "cpu-pinning-operator.fullname" $ }}-metrics-reader
+subjects:
+  {{- range . }}
+  - kind: ServiceAccount
+    name: {{ required "metrics.readers[].name is required" .name }}
+    namespace: {{ required "metrics.readers[].namespace is required" .namespace }}
+  {{- end }}
+{{- end }}
+{{- end }}
+{{- end }}

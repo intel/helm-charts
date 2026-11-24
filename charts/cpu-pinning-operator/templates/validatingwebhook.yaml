@@ -1,0 +1,49 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: {{ include "cpu-pinning-operator.fullname" . }}-{{ .Values.webhook.validatingWebhookConfiguration.name }}
+  {{- if .Values.certManager.enabled }}
+  annotations:
+    cert-manager.io/inject-ca-from: {{ .Release.Namespace }}/{{ include "cpu-pinning-operator.fullname" . }}-{{ .Values.certManager.certificate.name }}
+  {{- end }}
+  labels:
+    {{- include "cpu-pinning-operator.labels" . | nindent 4 }}
+webhooks:
+  - name: vbpp.kb.io
+    clientConfig:
+      service:
+        name: {{ include "cpu-pinning-operator.fullname" . }}-{{ .Values.webhook.service.name }}
+        namespace: {{ .Release.Namespace }}
+        port: {{ .Values.webhook.service.port }}
+        path: "/validate-v1alpha1-balloonpinningpolicy"
+      {{- if not .Values.certManager.enabled }}
+      caBundle: {{ include "cpu-pinning-operator.webhookCABundle" . }}
+      {{- end }}
+    rules:
+      - operations: ["DELETE", "UPDATE"]
+        apiGroups: ["cpu-pinning-operator.intel.com"]
+        apiVersions: ["v1alpha1"]
+        resources: ["balloonpinningpolicies"]
+    admissionReviewVersions: ["v1"]
+    sideEffects: None
+    timeoutSeconds: {{ .Values.webhook.validatingWebhookConfiguration.timeoutSeconds }}
+    # failurePolicy for a SAFETY guard. Unlike the mutating webhook (Ignore, so a
+    # webhook outage never blocks unrelated pod admission), this guard must not be
+    # silently bypassed while it is down — a delete/narrow that slips through could
+    # orphan pinned pods, the exact accident guardActivePods exists to prevent. So
+    # it defaults to Fail. The blast radius is scoped to the operator's own
+    # BalloonPinningPolicy resource ONLY (never pods or unrelated objects), so a
+    # webhook outage can at most delay editing/deleting a pinning policy — it can
+    # never break workload admission cluster-wide. Set it to Ignore if you would
+    # rather never block policy edits even at the cost of the guarantee.
+    #
+    # Without cert-manager and without webhook.caBundle the caBundle above is only
+    # a placeholder, so the API server can't call the webhook at all: a Fail
+    # policy would then fail-closed every policy DELETE/UPDATE (even with the
+    # guard off). Force Ignore in that mode so the chart never bricks policy edits
+    # by default — supply a real CA (cert-manager or webhook.caBundle) to run the
+    # guard closed.
+    failurePolicy: {{ if or .Values.certManager.enabled (nospace (.Values.webhook.caBundle | default "")) }}{{ .Values.webhook.validatingWebhookConfiguration.failurePolicy }}{{ else }}Ignore{{ end }}

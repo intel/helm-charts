@@ -1,0 +1,68 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+{{- /*
+Unset (or empty) metrics.serviceMonitor.enabled follows the cluster: rendered
+where the apiserver serves the ServiceMonitor kind and a secure scrape has a cert
+behind it, skipped otherwise. true or false is obeyed, and a string-typed value
+(--set-string, or a values file from a tool that quotes booleans) is read as the
+boolean it spells. The `fail` below applies only to an explicit true: asking for a
+secure scrape with no cert is an error, having no cert is not.
+*/}}
+{{- $servesScrapeCert := or (not .Values.metrics.secure) .Values.certManager.enabled .Values.metrics.serviceMonitor.allowExternalServingCert }}
+{{- $enabled := .Values.metrics.serviceMonitor.enabled }}
+{{- if kindIs "string" $enabled }}
+{{- $enabled = ternary (eq (lower $enabled) "true") nil (ne $enabled "") }}
+{{- end }}
+{{- if kindIs "invalid" $enabled }}
+{{- $enabled = and (.Capabilities.APIVersions.Has "monitoring.coreos.com/v1/ServiceMonitor") $servesScrapeCert }}
+{{- end }}
+{{- if and .Values.metrics.enabled $enabled }}
+{{- if not $servesScrapeCert }}
+{{- fail "metrics.serviceMonitor.enabled with metrics.secure=true requires a serving cert whose ca.crt and metrics-Service SANs back the https scrape. The chart-managed cert-manager Issuer/Certificate provides this — enable it with certManager.enabled=true. If you instead provision the serving-cert secret out-of-band (cert-manager run elsewhere, or a BYO secret containing ca.crt and covering the metrics Service SANs), set metrics.serviceMonitor.allowExternalServingCert=true to acknowledge that and bypass this check. Or set metrics.secure=false for a plaintext scrape." }}
+{{- end }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "cpu-pinning-operator.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "cpu-pinning-operator.labels" . | nindent 4 }}
+    {{- with .Values.metrics.serviceMonitor.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "cpu-pinning-operator.selectorLabels" . | nindent 6 }}
+  endpoints:
+    - port: metrics
+      path: /metrics
+      interval: {{ .Values.metrics.serviceMonitor.interval }}
+      {{- if .Values.metrics.secure }}
+      # The manager serves metrics over HTTPS with the serving cert (see
+      # --metrics-secure). Scrape over https and verify against that cert's CA —
+      # no insecureSkipVerify. The CA is read from the same serving-cert secret
+      # (ca.crt) — provisioned by the chart-managed cert-manager Certificate, or
+      # supplied out-of-band when allowExternalServingCert is set — and serverName
+      # pins the metrics Service DNS name the cert is issued for.
+      scheme: https
+      {{- if .Values.metrics.requireAuth }}
+      # The manager also AUTHENTICATES the client (metrics.requireAuth): it resolves
+      # this token with a TokenReview and authorizes the resulting user for
+      # `get /metrics` with a SubjectAccessReview. The file is read from the
+      # SCRAPING pod, so the identity is Prometheus's own ServiceAccount — bind it to
+      # the <fullname>-metrics-reader ClusterRole (metrics.readers) or the scrape
+      # gets 403. Prometheus Operator permits exactly this path in a ServiceMonitor
+      # and no other, which is why the token is referenced by file and not copied
+      # into a Secret.
+      bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+      {{- end }}
+      tlsConfig:
+        ca:
+          secret:
+            name: {{ .Values.certManager.certificate.secretName }}
+            key: ca.crt
+        serverName: {{ include "cpu-pinning-operator.fullname" . }}-metrics.{{ .Release.Namespace }}.svc
+      {{- end }}
+{{- end }}

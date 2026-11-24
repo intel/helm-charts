@@ -1,0 +1,878 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+# Default values for cpu-pinning-operator
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# Manager replicas. EVERY replica serves the webhook, while leader election
+# (leaderElection.enabled) keeps a single ACTIVE reconciler — so extra replicas
+# give admission high availability, but only the lease holder reconciles and
+# writes. Set to min(nodes, 3): the soft podAntiAffinity (see `affinity`) spreads
+# replicas one per node, so any beyond the node count co-locate and share a
+# node's fate. The operator does NOT self-scale this, which keeps apps/deployments
+# write RBAC off the manager — have your deploy tooling pass `--set replicaCount`
+# if you want it to track the node count.
+replicaCount: 2
+
+# PodDisruptionBudget for the manager Deployment. With HA (replicaCount 2), a
+# minAvailable of 1 lets a voluntary disruption (node drain, cluster upgrade)
+# evict at most one replica at a time, so the webhook always keeps a serving
+# pod. The PDB is only rendered when replicaCount > 1 — at a single replica a
+# minAvailable:1 PDB permits zero voluntary evictions and would block node
+# drains, so it is gated off automatically (no need to also flip enabled).
+# minAvailable is overridable for larger replica counts.
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+# Operator image, used by default by the manager container, the injected
+# wait-for-balloons init container, the topology probe and the uninstall hook Jobs
+# (initContainer.image and probe.image override it for those two).
+#
+# `repository` defaults to the image published on Docker Hub with each release tag
+# (linux/amd64 only). A mirrored or
+# air-gapped install overrides it with the mirror (add `imagePullSecrets` if that
+# registry is private). The chart never substitutes a floating tag such as
+# `latest`: under a moving tag two replicas admitted minutes apart can run
+# different binaries with no version to roll back to.
+#
+# `tag` empty follows the chart's appVersion, so the chart and the binary it asks
+# for move together. `digest` pins one exact image (`sha256:<hex>`; the algorithm
+# prefix is required) and wins over `tag` when both are set — a registry cannot
+# move it under a running Deployment. `pullPolicy: IfNotPresent` suits either
+# reference, since neither changes meaning once published.
+image:
+  repository: docker.io/intel/cpu-pinning-operator
+  pullPolicy: IfNotPresent
+  tag: ""
+  digest: ""
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+# Chart resources always go to the release namespace (`helm install -n`);
+# namespace.name does not move them. namespace.create renders a Namespace named
+# namespace.name (empty: the release namespace). Helm needs the release namespace
+# before it creates anything, so this works only for an existing namespace Helm can
+# adopt (one carrying Helm's ownership label and annotations), and never together
+# with --create-namespace. Otherwise leave it false and create and label the
+# namespace yourself (docs/secure-configuration.md).
+namespace:
+  create: false
+  name: ""
+
+# Pod Security Standards labels on the operator namespace (only applied when
+# namespace.create is true). The operator's own workloads — manager, the injected
+# wait-for-balloons init container, and the topology probe — run unprivileged and
+# meet the "restricted" level. The bundled balloons plugin
+# (nri-resource-policy-balloons.enabled, the default) runs in this namespace too and
+# does not (it mounts hostPath volumes), so use "restricted" only with the plugin
+# disabled here and installed in another namespace. On OpenShift, SCC admission is a
+# separate question: the topology probe needs the chart's probe SCC
+# (openShift.enabled, set by values-openshift.yaml).
+podSecurityStandards:
+  enabled: false
+  level: restricted
+
+# Default-deny NetworkPolicy for the operator (manager) pod, on by default.
+# Requires a CNI that enforces NetworkPolicy (Calico, Cilium, ...). It re-allows
+# the operator's own flows and blocks the rest: inbound webhook, metrics scrape
+# (restricted to the peers in networkPolicy.metrics.from), health probes and
+# balloons-ready; outbound API server, DNS, and a loopback to its own
+# balloons-ready port for the webhook's pre-flight check. When
+# webhook.reserveAuthority is active the internal reserve port is opened both ways
+# between manager replicas only. The webhook, health-probe and balloons-ready
+# ports stay reachable from ANY source by default: the API server and kubelet
+# connect from host-networked IPs no selector can match, and the injected init
+# containers live in arbitrary target namespaces this chart cannot select on. The
+# webhook port can be narrowed to explicit control-plane ipBlocks with
+# networkPolicy.webhook.from below; the other two cannot, their callers have no
+# knowable address set.
+networkPolicy:
+  enabled: true
+  webhook:
+    # Peers allowed to reach the webhook port (NetworkPolicy `from` selectors).
+    # Empty list = allow the webhook port from any source, the default, because
+    # the API server dials it from host-networked control-plane IPs that no pod
+    # or namespace selector can match — only an ipBlock can name them, and those
+    # addresses are site-specific.
+    #
+    # Left empty, ANY pod in the cluster can post a crafted AdmissionReview
+    # straight at the webhook, bypassing the API server. Set it on a
+    # multi-tenant cluster.
+    from: []
+    # Example — admit admission traffic only from the control-plane nodes:
+    #   from:
+    #     - ipBlock:
+    #         cidr: 10.0.0.0/28
+    # docs/secure-configuration.md ("Restricting the webhook port") has the
+    # commands that find those CIDRs, including the OpenShift and managed
+    # control-plane cases where the API server's egress IPs are not the node IPs.
+  metrics:
+    # Peers allowed to scrape the metrics port (NetworkPolicy `from` selectors,
+    # e.g. a namespaceSelector for the Prometheus namespace). Empty list = allow
+    # the metrics port from any source. Only applied when metrics.enabled.
+    from: []
+    # Example — restrict scraping to the monitoring namespace:
+    #   from:
+    #     - namespaceSelector:
+    #         matchLabels:
+    #           kubernetes.io/metadata.name: monitoring
+  egress:
+    # Ports the operator may reach the Kubernetes API server on. 443 covers the
+    # in-cluster `kubernetes` Service; add 6443 if your API server is fronted on
+    # that port (common on kubeadm/OpenShift). Destination is unrestricted since
+    # the API endpoint IPs vary per cluster.
+    apiServerPorts:
+      - 443
+      - 6443
+    # Allow outbound cluster DNS (UDP/TCP 53) so the operator can resolve the
+    # API server and other services.
+    dns: true
+
+# OpenShift / OKD enablement. Set enabled=true ONLY on OpenShift/OKD: a clean
+# install fails on OCP without the topology-probe SCC this renders (verified on
+# OCP 4.22, restricted SCC), while vanilla Kubernetes has no
+# security.openshift.io API group. When false (the default) no SCC and no
+# dedicated probe ServiceAccount are rendered.
+#
+# The rendered SCC grants the probe pod exactly what it needs — the fixed
+# non-root uid 1000 and the RuntimeDefault seccomp profile, with NO privilege and
+# NO hostPath — bound by an RBAC `use` grant to a dedicated probe ServiceAccount
+# the chart creates, never the namespace `default` SA. A custom SCC is needed
+# because no built-in one allows that uid+seccomp pair (restricted-v2 forces a uid
+# from the namespace range; anyuid/hostmount-anyuid forbid the seccomp profile).
+# The manager pods pass restricted-v2 unchanged, so the manager SA gets no extra
+# grant.
+#
+# The balloons plugin's OpenShift SCC is the nri-resource-policy-balloons
+# subchart's responsibility, via its nri-resource-policy-balloons.openshift.grant-scc
+# value (set in the values-openshift.yaml overlay).
+#
+# See deploy/cpu-pinning-operator/README.md ("Installing on OpenShift / OKD") for
+# the install procedure and the cert-manager CRD-ordering caveat.
+openShift:
+  enabled: false
+  # SCC resource name for the topology probe. SCCs are cluster-scoped; empty
+  # derives <fullname>-probe. Set a value only to pin an explicit name.
+  probeSCCName: ""
+  # ServiceAccount the probe pod runs as (created in the release namespace and
+  # bound to the probe SCC). Empty derives <fullname>-probe, in step with
+  # probeSCCName. Passed to the manager as PROBE_SERVICE_ACCOUNT.
+  probeServiceAccountName: ""
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname
+  # template
+  name: ""
+
+rbac:
+  # Specifies whether RBAC resources should be created
+  create: true
+
+# Uninstall hooks for a clean `helm uninstall` — this one flag gates both. The
+# per-node BalloonsPolicy CRs are garbage-collected via their ownerReference on
+# the chart-owned BalloonsClusterConfig singleton, but two teardown steps GC
+# cannot do run as hook Jobs, each with its own hook-only ServiceAccount +
+# ClusterRole that is removed afterwards:
+#   PRE-DELETE deletes the BalloonPinningPolicy guard's
+#     ValidatingWebhookConfiguration (RBAC: delete on that one name).
+#   POST-DELETE strips the operator-managed node labels (RBAC: nodes list/patch).
+#     It MUST run after the manager Deployment is gone — while the manager is up
+#     the live NodeReconciler re-labels any node a strip touched, so a strip run
+#     earlier (or by hand) does not hold.
+# Disabling this leaves the inert labels on nodes AND can make the first
+# `helm uninstall` exit non-zero — with cert-manager enabled the by-then
+# unreachable, failurePolicy: Fail guard webhook denies the DELETE of the
+# chart-owned policy. Keep it enabled unless you clean up out-of-band; a manual
+# equivalent is documented in the hook template and docs/troubleshooting.md.
+preDeleteHook:
+  enabled: true
+
+podAnnotations: {}
+
+podSecurityContext:
+  runAsNonRoot: true
+
+# Manager container securityContext. The defaults are the hardened set required
+# to run on a restricted Pod Security Admission namespace (and OpenShift's
+# restricted-v2 SCC); override any key to relax it for a non-restricted cluster.
+# Because the root filesystem is read-only the chart mounts an emptyDir at /tmp
+# for scratch writes, which also covers the DEFAULT webhook.certDir's writable
+# parent. If you point webhook.certDir OUTSIDE /tmp while keeping
+# readOnlyRootFilesystem: true, add a writable volume/mount for that path (or
+# relax readOnlyRootFilesystem).
+#
+# runAsGroup is pinned to 65532 but runAsUser is deliberately NOT pinned, and the
+# asymmetry is not an oversight — it follows the shape of OpenShift's SCC API.
+# An SCC constrains the uid (`runAsUser: {type: MustRunAsRange, ...}`, allocated
+# from the namespace's openshift.io/sa.scc.uid-range) and has NO runAsGroup
+# strategy at all: its group strategies are fsGroup and supplementalGroups. See
+# templates/openshift-scc.yaml for the full field set. So a literal runAsUser
+# needs its own SCC to be admitted on OpenShift — which is why the probe pod
+# ships one — while a literal runAsGroup is neither assigned nor validated there
+# and simply stands. 65532 is the gid the image already declares
+# (`USER 65532:65532`, a scratch image with no OS packages), so this pins what was the
+# effective primary gid anyway instead of leaving it implicit.
+securityContext:
+  readOnlyRootFilesystem: true
+  allowPrivilegeEscalation: false
+  runAsNonRoot: true
+  runAsGroup: 65532
+  capabilities:
+    drop:
+      - ALL
+  seccompProfile:
+    type: RuntimeDefault
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+nodeSelector: {}
+
+tolerations: []
+
+# Pod affinity for the manager replicas. Left empty ({}), the chart applies a
+# soft HA default: a podAntiAffinity spreading replicas across
+# topologyKey kubernetes.io/hostname plus a nodeAffinity preference toward
+# control-plane nodes. Both are soft, so a single-node cluster still schedules
+# every replica. Setting this REPLACES that default wholesale.
+affinity: {}
+
+# Leader election
+leaderElection:
+  enabled: true
+
+# Token-bucket pacing for the evictions a `driftPolicy: restart` policy performs
+# when a BalloonsClusterConfig or BalloonPinningPolicy edit drifts the pinning of
+# already-running pods: one eviction every `interval`, with `burst` allowed
+# back-to-back up front. A single edit can drift the whole fleet at once, so
+# widen the interval on a large fleet to keep the re-pin rollout gentle. See
+# docs/upgrade.md ("Pods that are already pinned").
+driftEviction:
+  # Go duration, e.g. "10s", "1m". Empty uses the manager default (10s).
+  interval: ""
+  # Token-bucket burst size. 0 uses the manager default (2).
+  burst: 0
+
+# Metrics
+metrics:
+  # Enable the operator's Prometheus metrics endpoint on `port`. When false the
+  # manager is started with `--metrics-bind-address=0`, so no listener runs at all
+  # and the metrics port/Service are not rendered; `secure` then has no effect.
+  enabled: true
+  port: 8080
+  # Serve the metrics endpoint over HTTPS. On by default: the stream carries
+  # per-CPU workload placement, so a plaintext scrape is a plaintext exposure.
+  # TLS reuses the SAME cert-manager serving certificate the webhook mounts
+  # (certManager.certificate.secretName at webhook.certDir) and the ServiceMonitor
+  # is rendered with scheme: https and full verification (no insecureSkipVerify).
+  # Note the manager mounts that secret — and so only starts once it exists —
+  # regardless of this setting, because the webhook needs it too. RENDERING A
+  # SERVICEMONITOR with secure=true and certManager.enabled=false is a hard
+  # `fail` unless you opt in via serviceMonitor.allowExternalServingCert. That
+  # applies to an explicit serviceMonitor.enabled=true only; left unset, the
+  # ServiceMonitor stays off there instead of failing the install. Set
+  # secure=false for a plaintext scrape if you terminate TLS elsewhere. The server
+  # presents a certificate and does not ask for a client one; the CLIENT is
+  # identified by a bearer token instead (see requireAuth).
+  secure: true
+  # Require every scraper to authenticate. The manager resolves the request's
+  # bearer token with a TokenReview and authorizes that user for `get /metrics`
+  # with a SubjectAccessReview, so a scrape needs a token AND an RBAC grant. On by
+  # default, and only meaningful with secure=true — a token on a plaintext
+  # listener would be readable by anything on the path, so the manager does not
+  # ask for one there.
+  #
+  # ACTION REQUIRED for Prometheus: the chart renders a
+  # <fullname>-metrics-reader ClusterRole holding exactly `get` on the
+  # non-resource URL /metrics, and the ServiceMonitor presents the scraping pod's
+  # own projected ServiceAccount token. Bind your Prometheus ServiceAccount to
+  # that role — via `readers` below, or your own ClusterRoleBinding — or the
+  # scrape gets 403 and the dashboards stay empty.
+  #
+  # Set false ONLY for a scraper that cannot present a bearer token. TLS stays on, but the endpoint then accepts any client
+  # that can reach it, which leaves networkPolicy.metrics.from as the only
+  # control over who reads per-CPU workload placement.
+  requireAuth: true
+  # ServiceAccounts to bind to the metrics-reader ClusterRole, e.g. the one your
+  # Prometheus runs as (kube-prometheus-stack: the `prometheus` SA in its release
+  # namespace). Empty renders the ClusterRole but no binding, on the assumption
+  # you bind it yourself. Only used when requireAuth applies.
+  #   readers:
+  #     - name: prometheus-kube-prometheus-prometheus
+  #       namespace: monitoring
+  readers: []
+  # ServiceMonitor for the Prometheus Operator. Unset (the default) follows the
+  # cluster: rendered where the apiserver serves the ServiceMonitor kind and the
+  # scrape has a cert behind it (see `secure` above), skipped elsewhere, since the
+  # apiserver rejects the object without its CRD. true or false decides it
+  # instead — true on a cluster without the CRD fails the apply. A render with no
+  # cluster behind it (helm template, --dry-run=client) sees no CRDs either, so a
+  # template-only pipeline has to set this explicitly or pass --api-versions.
+  serviceMonitor:
+    enabled:
+    interval: 30s
+    labels: {}
+    # Opt-in escape hatch for the secure-scrape gating above: set true when you
+    # supply the serving-cert secret out-of-band (BYO, or cert-manager run
+    # elsewhere) so the chart renders the secure ServiceMonitor even with
+    # certManager.enabled=false. That secret must then carry a valid ca.crt AND
+    # cover the metrics Service SANs
+    # (<fullname>-metrics.<ns>.svc[.cluster.local]); verification stays fully on.
+    allowExternalServingCert: false
+  # PrometheusRule (recording + alert rules) for the Prometheus Operator. Unset
+  # (the default) follows the cluster the same way serviceMonitor does, on its own
+  # kind, and true or false decides it instead. It also
+  # requires metrics.enabled=true — with the endpoint off the rule would have no
+  # series to evaluate. Recording rules pre-compute the per-NUMA used/free views;
+  # `alerts: false` ships only those. Add extra labels (e.g. a `release:` selector
+  # your Prometheus watches) with `labels`.
+  prometheusRule:
+    enabled:
+    labels: {}
+    # Emit the alerting rules (recording rules are always included when enabled).
+    alerts: true
+
+# Per-node Grafana canvas dashboards (per-core CPU map over
+# cpu_pinning_cpu_assignment), one ConfigMap per node for the Grafana sidecar to
+# auto-import. Off by default: only useful where Grafana with the dashboards
+# sidecar is installed. sidecarLabel/sidecarLabelValue must match your Grafana's
+# sidecar.dashboards.label selector (kube-prometheus-stack defaults to
+# grafana_dashboard: "1"). Requires the operator's configmaps RBAC (rbac.create).
+grafanaDashboard:
+  enabled: false
+  # Namespace the operator creates the dashboard ConfigMaps in (default: the
+  # release namespace). Some sidecars only watch a specific namespace — set it to
+  # Grafana's if so.
+  namespace: ""
+  sidecarLabel: grafana_dashboard
+  sidecarLabelValue: "1"
+  # UID of the Prometheus data source both the per-node canvases and the
+  # fleet-overview dashboard bind their `datasource` variable to. Leave empty (the
+  # default) to leave the variable unset so Grafana auto-selects the default
+  # Prometheus-typed data source at import — the uid is NOT literally "prometheus"
+  # on OpenShift (user-workload-monitoring Thanos, uid "openshift-thanos") or on
+  # any cluster with a renamed data source. Set it to pin a uid when auto-select
+  # is ambiguous (multiple Prometheus-typed data sources).
+  datasourceUid: ""
+  # Operator-logs section (two template variables plus a logs panel) of the
+  # cluster dashboard. OFF by default, and omitted from the dashboard JSON
+  # entirely when off: a Loki datasource variable on a cluster with no Loki has
+  # nothing to resolve to, so Grafana opens the dashboard with "Datasource was not
+  # found" on it and on the `namespace` variable bound to it — two red warnings
+  # that teach a new user the dashboard is broken when it is not. Nothing outside
+  # the logs panel reads either variable. Turn it on when a Loki data source and a
+  # log shipper for the operator's stdout both exist. Setting lokiDatasourceUid
+  # also turns it on, so a pinned uid keeps working without this flag.
+  # The panel hides two balloons-plugin ERROR messages that say nothing about the
+  # cluster, and carries a picker to show them again. No Helm value turns the filter
+  # off, because a chart-level switch could hide lines with no way for a viewer to
+  # reveal them. What is hidden and why: docs/observability.md.
+  lokiLogs:
+    enabled: false
+  # UID of the Loki data source the operator-logs panel binds to. Leave empty to
+  # let the `loki` datasource variable auto-select the (single) Loki data source of
+  # that type on import — Loki data sources provisioned without an explicit uid get
+  # a non-deterministic auto-assigned uid, so binding by name is not possible. Set
+  # it explicitly if the logs panel renders empty because auto-select picked the
+  # wrong one. A non-empty value also renders the logs section on its own, without
+  # lokiLogs.enabled.
+  # The value is matched against the data source's UID, never its display name: the
+  # chart writes it into the variable's `value` only, because Grafana's `text` is
+  # the name and a wrong one makes the variable resolve to nothing.
+  lokiDatasourceUid: ""
+  # Stream-label names the logs panel's LogQL selector and the `namespace`
+  # variable's label_values() query use to find the operator's logs in Loki. The
+  # defaults target OTLP/k8sattributes labels (OpenTelemetry Collector → Loki
+  # /otlp): namespace becomes k8s_namespace_name and the workload is selected by
+  # k8s_deployment_name. On a promtail/loki-native cluster (bare `namespace`/`pod`
+  # labels) set namespace: namespace and workload: pod -- or workload: app, which
+  # promtail sets from the pod's app label and which matches the operator exactly
+  # rather than by pod-name prefix. Verified against promtail 6.17.1.
+  lokiLabels:
+    namespace: k8s_namespace_name
+    workload: k8s_deployment_name
+    # `node` and `pluginWorkload` belong to the per-MACHINE page's log panel, which
+    # reads the balloons plugin's log for that machine -- the component that applies
+    # the pinning, and the only one of the two whose lines carry the node as a
+    # stream label. promtail names them node_name and app.
+    node: k8s_node_name
+    pluginWorkload: k8s_daemonset_name
+  # The balloons plugin's workload name as the log shipper labels it. Matches the
+  # DaemonSet the nri-resource-policy-balloons subchart deploys.
+  lokiPluginName: nri-resource-policy-balloons
+  # Grafana folder the generated per-node dashboards are grouped into, kept
+  # separate from any hand-authored dashboards (sidecar folder annotation). Leave
+  # folderAnnotation empty to skip (dashboards land in the General folder).
+  folderAnnotation: grafana_folder
+  folder: "CPU Pinning — Nodes"
+  # Cluster dashboard — one static, topology-independent dashboard shipped by the
+  # chart: cluster-wide tiles plus one table row per managed machine, whose name
+  # links into that machine's own generated dashboard. Rendered only when
+  # grafanaDashboard.enabled AND fleetOverview.enabled. Its recording-rule panels
+  # fall back to raw cpu_pinning_cpu_assignment aggregations when
+  # metrics.prometheusRule is not installed.
+  fleetOverview:
+    enabled: true
+
+# Health probes
+healthProbe:
+  port: 8081
+
+# Per-node balloons-readiness endpoint served by the manager. The injected
+# wait-for-balloons init container polls GET /balloons/ready?node=<nodeName> on
+# this port until the NRI balloons plugin pod on its node is Ready. It exposes
+# only a per-node boolean and needs no client credentials; when
+# networkPolicy.enabled the chart re-allows this port so init pods can reach it.
+#
+# secure (default) serves HTTPS with the webhook's serving cert. The operator
+# copies ca.crt into a ConfigMap (<fullname>-readiness-ca) in every namespace the
+# webhook targets; the init container mounts it and verifies the Service name, so
+# a spoofed "ready" cannot start a workload before its pinning is in place. secure
+# needs certManager.enabled, or allowExternalServingCert=true to assert that an
+# out-of-band serving cert carries ca.crt and the
+# <fullname>-balloons-ready.<ns>.svc SAN; with neither the render fails. Set
+# secure: false only to fall back to plaintext HTTP.
+balloonsReady:
+  port: 8082
+  secure: true
+  allowExternalServingCert: false
+
+# Webhook configuration
+webhook:
+  # Base64 PEM of the CA that signed your own serving cert (base64 -w0 ca.crt),
+  # for certManager.enabled=false. Rendered as both webhooks' caBundle, and lets
+  # the validating guard keep its configured failurePolicy. Empty keeps the
+  # placeholder and forced Ignore. Ignored with cert-manager, whose cainjector
+  # owns the field. When the CA rotates, upgrade with the new bundle.
+  caBundle: ""
+  # Port the webhook server listens on and the webhook Service targets.
+  port: 9443
+  certDir: /tmp/k8s-webhook-server/serving-certs
+  # Lifetime of the webhook's in-process admission reservation for a steered pod
+  # (a Go duration, e.g. "90s", "3m"). It MUST outlive the NRI balloons plugin's
+  # NRT publish latency (pin-to-CR write + informer cache lag), or a burst of pods
+  # stops subtracting each other's not-yet-published demand from live per-NUMA
+  # headroom and the admission race reopens. Leave empty for the manager default
+  # (90s); raise it if your plugin publishes slower. See
+  # docs/internal/capacity-check-internals.md ("NRT publish latency requirement").
+  reservationTTL: ""
+  # Leader-authoritative reserve for HA (multi-replica) installs. Every replica
+  # ranks candidates locally and forwards ONLY the reserve to the leader-election
+  # lease holder over an internal mTLS endpoint, so the fleet accounts headroom
+  # against ONE store instead of one per replica.
+  #
+  # On by default: replicaCount is 2, and two independent stores can reserve
+  # the same per-NUMA headroom twice. Under capacityCheck.mode: enforce a
+  # reserve the authority cannot commit DENIES the pod — a refused pod is
+  # retried by its own controller, whereas an over-admitted one stops in
+  # CreateContainerError and needs a human. warn (the mode default) and off keep
+  # the local-store fallback. See docs/internal/capacity-check-internals.md.
+  #
+  # The endpoint reuses the SAME cert-manager serving certificate the webhook
+  # already mounts (no parallel cert stack) and requires a client certificate
+  # chaining to that CA (mTLS), so only another operator replica can reserve. It
+  # listens on reserveAuthority.port on a dedicated listener, kept off the
+  # apiserver-facing admission path.
+  #
+  # Gated so a single-replica install pays ZERO cost: the flag is passed to the
+  # manager only when enabled AND replicaCount > 1 AND leaderElection.enabled AND
+  # the serving cert is one the manager can verify a peer against (see below).
+  #
+  # The manager EXITS at startup if that cert carries no ca.crt or no DNS SAN,
+  # since it can authenticate no peer without them. cert-manager provides both, so
+  # certManager.enabled is the fourth condition. An install supplying the
+  # serving-cert secret out-of-band gets NO reserve authority until it sets
+  # allowExternalServingCert=true to assert the secret carries them — same opt-in
+  # shape as metrics.serviceMonitor.allowExternalServingCert. Until then each
+  # replica keeps its own reservation store.
+  reserveAuthority:
+    enabled: true
+    port: 9444
+    allowExternalServingCert: false
+  service:
+    name: webhook
+    port: 443
+    # Narrowing lever for an install that turns webhook.reserveAuthority OFF.
+    # Each replica then holds its OWN reservation store, so a burst of CREATEs
+    # spread across replicas can reserve the same per-NUMA headroom twice (the
+    # cross-replica over-admission window, bounded by reservationTTL and
+    # observable via cpu_pinning_webhook_reservations_recorded_total). ClientIP pins
+    # one client to one replica, narrowing the window — the apiserver is the
+    # client here, so it helps most when a single apiserver drives the burst.
+    # Must be "None" or "ClientIP"; any other value is a hard `fail` at render.
+    # Default "" leaves it unset (None).
+    sessionAffinity: ""
+  mutatingWebhookConfiguration:
+    name: mutating-webhook
+    failurePolicy: Ignore
+    timeoutSeconds: 10
+  # Validating guard for BalloonPinningPolicy delete/narrowing (opt-in per policy
+  # via spec.guardActivePods). Defaults to failurePolicy: Fail so a SAFETY guard
+  # can't be silently bypassed while it is down — a delete/narrow that slipped
+  # through could orphan pinned pods. It is scoped to BalloonPinningPolicy only,
+  # so an outage can at most delay editing/deleting a pinning policy and never
+  # affects workload (pod) admission. Set failurePolicy: Ignore to prefer
+  # availability of policy edits over the guarantee. NOTE this value is honored
+  # only with a real CA (certManager.enabled=true or webhook.caBundle set):
+  # without one the API server cannot reach the webhook at all, so the chart
+  # forces Ignore rather than fail-closed every policy edit.
+  validatingWebhookConfiguration:
+    name: validating-webhook
+    failurePolicy: Fail
+    timeoutSeconds: 10
+  # Namespaces the mutating webhook targets at bootstrap, via the built-in
+  # kubernetes.io/metadata.name label (exact names only — a label selector cannot
+  # glob). Empty (default) takes the exact names in balloonPinningPolicy.namespaces
+  # when create is true. If that is empty too, the selector matches no namespace,
+  # leaving admission inert until a BalloonPinningPolicy names one.
+  targetNamespaces: []
+  # Opt-in: bootstrap the webhook's namespaceSelector with a label selector
+  # instead of the exact-name form above. This only scopes the brief window
+  # before the BalloonPinningPolicy reconciler takes over the selector at
+  # runtime — set balloonPinningPolicy.namespaceSelector to make it durable.
+  # Leave unset (default) to keep exact-name targeting. Kubernetes semantics: an
+  # empty selector ({}) matches every namespace, so scope it with matchLabels.
+  # namespaceSelector:
+  #   matchLabels:
+  #     cpu-pinning-operator.intel.com/pinning: enabled
+
+# wait-for-balloons init container the webhook injects into matched pods. It
+# runs the operator's OWN image with the wait-for-balloons subcommand, polling
+# the manager's per-node readiness endpoint (balloonsReady) until the NRI
+# balloons plugin pod on the pod's node is Ready. No kubectl, no shell, no
+# separate init image, and no admission-time cluster RBAC.
+initContainer:
+  name: wait-for-balloons
+  # Left empty this takes the manager's own reference, digest and all (see
+  # `image`), so the init container inherits the same minimal image and needs no
+  # separate build.
+  # Override only to pin a different digest for the poller.
+  image: ""
+  pullPolicy: IfNotPresent
+  balloons:
+    # Namespace / DaemonSet name of the NRI balloons plugin the readiness
+    # endpoint reads. waitTimeout (seconds) is the init container's poll budget.
+    #
+    # namespace: empty (default) auto-resolves to the RELEASE namespace when the
+    # nri-resource-policy-balloons subchart is enabled (Helm puts the DaemonSet
+    # there), and to kube-system when it is disabled. Set it explicitly to point
+    # the check at an external balloons install in some other namespace.
+    namespace: ""
+    daemonsetName: nri-resource-policy-balloons
+    waitTimeout: 300
+
+# Short-lived, unprivileged topology-probe pod the Node reconciler launches per
+# node to read /sys + /proc/cpuinfo. It runs the operator's OWN image with the
+# topology-probe subcommand — no shell, no second image — so an air-gapped cluster
+# needs only the operator image mirrored, and the probe carries the same scanned
+# and hardened content as the manager.
+probe:
+  # Probe container image. Empty (the default) uses the operator image above, digest
+  # included, which is the only reference that needs mirroring for an air-gapped
+  # install. Set this
+  # only to point the probe at a different mirror of that same image; an image
+  # without the operator binary cannot run the probe.
+  image: ""
+  # Probe container requests and limits. Requests are what a namespace carrying a
+  # LimitRange or a requests-enforcing ResourceQuota admits on — a probe pod with
+  # none is rejected there and the node is never discovered. The probe reads a few
+  # hundred sysfs files once and exits, so it is sized like a short-lived init
+  # container; raise these if the probe is OOM-killed or throttled on a very wide
+  # machine. Raise a limit and its request together: a request above its own limit is
+  # refused and the built-in pair is used instead, because the API server rejects such
+  # a pod outright.
+  #
+  # The probe pod pulls the operator image with the release's `imagePullSecrets`, so a
+  # private registry needs nothing extra here.
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+    limits:
+      cpu: 100m
+      memory: 128Mi
+  # Tolerations for the probe pod, so it schedules on tainted nodes the operator
+  # must still discover. Default tolerates every taint (topology is needed on
+  # every node, control-plane and tainted workers included). Set an explicit
+  # list to restrict where probes run.
+  tolerations:
+    - operator: Exists
+
+# Certificate manager configuration. This gates only the operator's OWN
+# Issuer/Certificate (the webhook serving cert) — it does NOT install
+# cert-manager. To have this chart install cert-manager itself, enable the
+# bundled subchart below (cert-manager.enabled).
+certManager:
+  enabled: true
+  issuer:
+    name: selfsigned-issuer
+  # The CA signing the serving cert, so ca.crt stays the same across serving-cert
+  # renewals. cert-manager renews it at 2/3 of duration, keeping its key so replicas
+  # holding either CA certificate still verify each other.
+  ca:
+    duration: 8760h
+  certificate:
+    name: serving-cert
+    secretName: webhook-server-cert
+    # Serving-cert private key. Defaults to ECDSA P-384 rather than
+    # cert-manager's RSA-2048, for a stronger key (about 192-bit against about
+    # 112-bit security strength, per NIST SP 800-57).
+    # RSA/3072 is an acceptable alternative for interop-constrained environments
+    # (algorithm: RSA, size: 3072); the manager's approved TLS 1.2 cipher list
+    # carries both ECDSA and RSA suites, so either leaf negotiates.
+    privateKey:
+      algorithm: ECDSA
+      size: 384
+
+# Prerequisite subcharts (declared in Chart.yaml, archives committed under
+# charts/). Keys must match the dependency names in Chart.yaml.
+#
+# cert-manager is a PREREQUISITE, not a bundled default: this chart needs it for
+# the webhook serving cert but ships zero cert-manager content. Install it FIRST,
+# as its own release, so its CRDs are registered before this chart renders:
+#
+#   helm repo add jetstack https://charts.jetstack.io
+#   helm repo update
+#   helm install cert-manager jetstack/cert-manager --version v1.20.3 \
+#     --namespace cert-manager --create-namespace \
+#     --set crds.enabled=true --wait
+#   helm install cpu-pinning-operator deploy/cpu-pinning-operator ...
+#
+# Setting cert-manager.enabled=true pulls the subchart in instead, but that is a
+# dev/test convenience and is NOT reliably single-step on a bare cluster:
+# cert-manager ships its CRDs as ordinary templates, so they render in the same
+# phase as this chart's Certificate/Issuer and Helm may validate ours first.
+cert-manager:
+  enabled: false
+# NRI balloons plugin: ships the balloonspolicies.config.nri CRD and does the
+# actual pinning. The operator writes BalloonsPolicy CRs this plugin consumes.
+nri-resource-policy-balloons:
+  enabled: true
+
+# Ships the singleton BalloonsClusterConfig (well-known name "cluster") holding
+# the node/cluster-global knobs: how balloon types are generated on every node,
+# node exclusion, and the webhook failurePolicy. There can be only one — the
+# CRD's CEL validation rejects any other name. Set create: false to manage it
+# out-of-band.
+balloonsClusterConfig:
+  create: true
+  balloon:
+    cpuAllocation: physical-cores
+    # htSiblingPolicy — what happens to the hyperthread siblings of pinned cores
+    # in physical-cores mode (no effect in hyperthreads mode):
+    #   exclude (default) — siblings are removed from the pool
+    #     (availableResources: exclude-cpuset), so no other pod shares a pinned
+    #     physical core (host processes are not excluded).
+    #   reserved — density mode: siblings go to the reserved pool
+    #     (reservedResources.cpu), recovering ~half the cores for non-pinned work
+    #     at the cost of noisy-neighbor interference on the shared physical core.
+    #     The reserved pool then IS the sibling set, so the reserved sizing below
+    #     (cpus/percent/measured) is NOT applied.
+    htSiblingPolicy: exclude
+    # Reserved CPU pool. Set AT MOST ONE of `reserved.cpus` (explicit logical-CPU
+    # count), `reserved.percent` (% of the node's physical cores), or
+    # `reserved.measured` (dynamic sizing from observed non-pinned-pod CPU demand
+    # plus headroom) — a CEL rule rejects the CR if more than one is set.
+    # Whichever you pick is clamped per node to [4, 25% of physical cores] and to
+    # leave ≥16 CPUs for workloads, then rounded down to an even number. Omit the
+    # block to get the operator default of 12 CPUs.
+    reserved:
+      cpus: 12
+    # Alternatively, percent-based:
+    #   reserved:
+    #     percent: 5
+    # Or measured (dynamic sizing from observed reserved-pool usage + headroom):
+    #   reserved:
+    #     measured:
+    #       headroomPercent: 50   # default: reserve 1.5× observed demand
+    #       min: 4                # default: floor and cold-start value
+    # reservedNamespaces: the namespace globs whose UNPINNED pods route onto the
+    # exclusive reserved CPU pool (emitted as the BalloonsPolicy's
+    # reservedPoolNamespaces). The NRI plugin ALWAYS routes kube-system there
+    # regardless of this list, and a pod matched by neither a workload balloon nor
+    # this list lands on the plugin's implicit, non-exclusive "default" balloon
+    # (the node's shared cpuset) — so scoping never strands a pod.
+    #   - Omit the field (default) — the operator applies ["*", "kube-system"].
+    #     The "*" wildcard routes EVERY unpinned pod onto reserved: correct for a
+    #     DEDICATED inference node, but on a SHARED/OpenShift node it funnels all
+    #     system/platform pods into reserved and exhausts the pool, so pinned
+    #     inference pods can't get a balloon. Scope or empty this list there.
+    #   - Scope it (e.g. ["inference"]) — only those namespaces route to reserved.
+    #   - Set it to [] — route nothing beyond the always-implicit kube-system.
+    # See docs/configuration.md.
+    # reservedNamespaces:
+    #   - inference
+  webhook:
+    failurePolicy: Ignore
+  # Automatic, hardware-driven node classification. The operator classifies every
+  # provisioned node into one of four hardware classes — mixed-cpu-amx-gpu,
+  # cpu-amx, gpu-only, cpu-only — from its GPU presence, AMX support and
+  # logical-CPU count, and publishes the result as the
+  # cpu-pinning-operator.intel.com/node-class label. Classification ALWAYS runs; the
+  # fields below only tune the rules, and leaving the block commented uses the
+  # built-in defaults. See docs/configuration.md ("Mixed fleets: per-node overrides").
+  # classification:
+  #   # Minimum logical CPUs for a non-GPU AMX node to reach cpu-amx without an
+  #   # explicit amxNodeSelector match (default 64).
+  #   cpuAMXMinLogicalCPUs: 64
+  #   # A non-GPU AMX node matching this is cpu-amx regardless of CPU count.
+  #   # amxNodeSelector:
+  #   #   matchLabels:
+  #   #     cpu-inference: "true"
+  #   # Matching GPU nodes are forced gpu-only even with AMX.
+  #   # gpuOnlyNodeSelector:
+  #   #   matchLabels:
+  #   #     gpu-only: "true"
+  #   # Node label to force a class by hand. The value must be a known class name,
+  #   # and an AMX class on a non-AMX node is rejected.
+  #   # overrideLabel: cpu-pinning-operator.intel.com/node-class-override
+  # classProfiles: per-class balloon defaults, keyed by class name. Only
+  # cpuAllocation and reserved are honored — other balloon fields are ignored.
+  # classProfiles:
+  #   cpu-amx:
+  #     reserved:
+  #       cpus: 16
+  #   gpu-only:
+  #     reserved:
+  #       percent: 10
+  # nodeConfigOverrides: ordered {nodeSelector, balloon} entries for mixed-CPU
+  # fleets. The FIRST override whose nodeSelector matches a node WINS. Per-node
+  # config resolves spec.balloon, then the node's classProfile (if its class has
+  # one), then that override, layered PER FIELD — so a reserved-only override
+  # keeps the cpuAllocation of the layer beneath it, and a node matching no
+  # override keeps whatever spec.balloon + its classProfile resolved to.
+  # nodeConfigOverrides:
+  #   # Example: a higher-core-count generation with measured sizing
+  #   - nodeSelector:
+  #       matchLabels:
+  #         cpu-generation: sapphire-rapids
+  #     balloon:
+  #       reserved:
+  #         measured:
+  #           headroomPercent: 50
+  #           min: 8
+  #   # A second override for smaller nodes (evaluated after the first)
+  #   - nodeSelector:
+  #       matchLabels:
+  #         cpu-generation: cascade-lake
+  #     balloon:
+  #       reserved:
+  #         cpus: 8
+  # excludeNodeSelector: nodes matching are dropped from the pinning pool
+  #   (no BalloonsPolicy, operator labels removed).
+  # excludeNodeSelector:
+  #   matchLabels:
+  #     cpu-pinning-operator.intel.com/disabled: "true"
+
+# The chart's BalloonPinningPolicy. It ships with NO target: with create: true you
+# must set match (which pods) and namespaces or namespaceSelector (where), or the
+# render fails. Example, a bare vLLM Deployment in "inference":
+#   --set 'balloonPinningPolicy.match.byContainerName={vllm}' \
+#   --set 'balloonPinningPolicy.namespaces={inference}'
+# docs/examples/values/kserve.yaml is the KServe predictor variant. The intent
+# below reads the vLLM flags/env and falls back to span 1 for any other runtime.
+# This CR holds only per-workload knobs; node-global settings live on
+# balloonsClusterConfig above. Set create: false to manage policies yourself.
+balloonPinningPolicy:
+  create: true
+  name: default
+  # Which pods to pin. Required when create is true: set byContainerName,
+  # byPodLabels, or both.
+  match: {}
+    # byContainerName: [vllm]          # kserve-container for a KServe predictor
+    # byPodLabels: {app: vllm}
+    # containerSelection governs multi-candidate matches (byPodLabels, or a
+    # byContainerName glob hitting >1 container): wholePod (default) pins the
+    # whole pod / skips an ambiguous multi-hit glob; largestContainer pins the
+    # highest-CPU candidate container. A single exact/glob hit is unaffected.
+    # containerSelection: wholePod
+  # Which namespaces to watch: exact names or globs. Required when create is true,
+  # unless namespaceSelector is set. Its exact names also bootstrap
+  # webhook.targetNamespaces when that is left empty.
+  namespaces: []
+  # Label-selector mode: target namespaces by label in ADDITION to the
+  # exact names / globs above, re-evaluated when a namespace is relabelled. Unset
+  # (default) keeps exact-name mode. Kubernetes semantics: an empty selector ({})
+  # matches every namespace — scope it with matchLabels.
+  # namespaceSelector:
+  #   matchLabels:
+  #     cpu-pinning-operator.intel.com/pinning: enabled
+  # Intent: runtime-agnostic contract by which the webhook derives a workload's
+  # placement span/multiplier/co-locate off a matched pod. This example reads the
+  # vLLM engine flags, which a vLLM-backed KServe runtime takes in kserve-container's
+  # args too — an SGLang or ACME policy would only change the annotation / argRegex /
+  # envVar. A KServe predictor that may run vLLM or SGLang lists both runtimes' flags
+  # as argRegex alternatives: docs/examples/policy-kserve.yaml. See
+  # docs/configuration.md for details.
+  intent:
+    span:
+      # Pod-annotation override (highest precedence).
+      annotation: cpu-pinning-operator.intel.com/tp
+      # Go regexp (RE2 syntax) against the joined container args; the first
+      # non-empty numeric capture group is the span. Matches both
+      # "--tensor-parallel-size N" and "-tp N" (space or =); (?:^|\s) anchors the flag
+      # to an argument start, so a model path like "./llama-tp=8" is not read as -tp.
+      argRegex: '(?:^|\s)(?:--tensor-parallel-size|-tp)(?:=|\s+)(\d+)'
+      # Container env fallback.
+      envVar: VLLM_TENSOR_PARALLEL_SIZE
+      # Value when no source above yields an integer.
+      default: 1
+    multiplier:
+      annotation: cpu-pinning-operator.intel.com/multiplier
+      argRegex: '(?:^|\s)(?:--pipeline-parallel-size|-pp)(?:=|\s+)(\d+)'
+      envVar: VLLM_PIPELINE_PARALLEL_SIZE
+      default: 1
+    # coLocate steers span placement across NUMA nodes: package = single package
+    # (co-locate for latency); numa = across NUMA (spread for bandwidth); "" (or
+    # unset) leaves it to the live-headroom placement engine.
+    # coLocate: ""
+
+  # Capacity check: does the CPU request fit the target node's per-NUMA
+  # capacity for the computed span (live NRT, static fallback)?
+  #   warn (default) — admit + Warning event | enforce — deny | off — skip.
+  capacityCheck:
+    mode: warn
+  # Per-workload node-selection knobs.
+  #   enforcePinning (default true): matched pods only schedule on
+  #     balloons-enabled nodes (required nodeAffinity), AND a matched pod whose
+  #     mutation the webhook has to abort is DENIED rather than admitted
+  #     unpinned — including on a cluster with no provisioned node yet. See
+  #     docs/configuration.md for the exceptions and the availability cost.
+  #   nodeFeatures: node-label → affinity-mode map (prefer=soft, require=hard,
+  #     ignore=no-op). AMX ships as the default entry; add other vendor labels the
+  #     same way, e.g. "vendor.io/gpu-family": require.
+  scheduling:
+    enforcePinning: true
+    nodeFeatures:
+      cpu-pinning-operator.intel.com/amx: prefer
+  # What happens to already-running pinned pods when the config changes
+  # (the webhook only re-pins at CREATE):
+  #   eventsOnly (default) — emit a Warning "Drifted" event per stale pod;
+  #   restart — additionally evict drifted pods (PDB-aware) to re-pin them.
+  driftPolicy: eventsOnly
+  # Opt-in guard: when true, a validating webhook rejects deleting or narrowing
+  # this policy while pods still depend on it (status.boundPods non-empty), so
+  # such a change can't silently orphan pinned workloads. The escape hatch is to
+  # set this false (always allowed, even alongside a narrowing edit) and then
+  # delete/narrow. Unset (default) leaves the guard off. See docs/configuration.md
+  # and webhook.validatingWebhookConfiguration for the failurePolicy implication.
+  # guardActivePods: true
+
+# Logging
+log:
+  level: info
+  development: false

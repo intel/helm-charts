@@ -1,0 +1,253 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+{{- /*
+Unset (or empty) metrics.prometheusRule.enabled follows the cluster: rendered
+where the apiserver serves the PrometheusRule kind, skipped where it does not.
+true or false is obeyed. A string-typed value (--set-string, or a values file from
+a tool that quotes booleans) is read as the boolean it spells, not as a non-empty
+string, so "false" does not render.
+*/}}
+{{- $enabled := .Values.metrics.prometheusRule.enabled }}
+{{- if kindIs "string" $enabled }}
+{{- $enabled = ternary (eq (lower $enabled) "true") nil (ne $enabled "") }}
+{{- end }}
+{{- if kindIs "invalid" $enabled }}
+{{- $enabled = .Capabilities.APIVersions.Has "monitoring.coreos.com/v1/PrometheusRule" }}
+{{- end }}
+{{- if and .Values.metrics.enabled $enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ include "cpu-pinning-operator.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "cpu-pinning-operator.labels" . | nindent 4 }}
+    {{- with .Values.metrics.prometheusRule.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  groups:
+    # Recording rules — pre-compute the per-NUMA used/free views the operator's
+    # metrics are designed to be derived from (see docs/observability.md), so
+    # dashboards and queries reference one series instead of repeating the
+    # aggregation over cpu_pinning_cpu_assignment.
+    - name: cpu-pinning-operator.recording
+      rules:
+        - record: cpu_pinning:cpu_used:per_numa
+          # Deduplicate per logical CPU first (max by node,numa,cpu) so a series
+          # scraped from multiple targets (HA replicas, extra endpoints) with
+          # differing job/instance/pod labels is counted ONCE, then count the
+          # deduplicated CPUs per NUMA. A plain count by (node,numa) would inflate
+          # used (and drive cpu_free negative) under multi-target scraping.
+          expr: >-
+            count by (node, numa) (
+              max by (node, numa, cpu) (cpu_pinning_cpu_assignment{balloon!="free"})
+            )
+        - record: cpu_pinning:cpu_free:per_numa
+          # The total is node_pinnable_cpus, NOT node_logical_cpus: a CPU the node's
+          # generated policy excludes from the plugin's allocatable pool is claimed by
+          # nobody and can be taken by nobody, so counting it here would claim room the
+          # plugin will not hand out. node_logical_cpus is the fallback, for a node
+          # whose pool the operator has not resolved yet (not provisioned since the
+          # operator started), where the hardware total is the only figure there is.
+          # Aggregate the total down to (node, numa) first: as scraped it
+          # also carries job/instance/etc., so subtracting it directly from the
+          # (node, numa)-only used vector would fail the label match and yield an
+          # empty result. Use max by (node, numa) (not sum) so the same static
+          # per-NUMA total exposed by multiple scrape targets (HA replicas, extra
+          # endpoints) is NOT double-counted. The `or (... * 0)` term substitutes a
+          # 0 used value for a NUMA that has no entry in the used vector (a
+          # fully-FREE NUMA, where the balloon!="free" count matched nothing), so
+          # its free count still records as the full pinnable total.
+          #
+          # clamp_min at 0 because used counts every claimed CPU while the total counts
+          # only the pinnable ones, so the two can cross: a container placed while the
+          # node kept the hyperthread siblings allocatable holds one until it restarts,
+          # even after the node is switched to a mode that excludes them. Free is a
+          # count of room and there is no negative amount of room; the over-claim stays
+          # visible in cpu_pinning:cpu_used:per_numa, which is deliberately not clamped.
+          expr: >-
+            clamp_min(
+              (max by (node, numa) (cpu_pinning_node_pinnable_cpus)
+                or max by (node, numa) (cpu_pinning_node_logical_cpus))
+              - (cpu_pinning:cpu_used:per_numa or (max by (node, numa) (cpu_pinning_node_logical_cpus) * 0))
+            , 0)
+        - record: cpu_pinning:cpu_used:per_balloon
+          # Same per-CPU dedup as per_numa before counting, so multi-target
+          # scraping doesn't overcount the CPUs owned by each balloon.
+          expr: >-
+            count by (node, balloon) (
+              max by (node, balloon, cpu) (cpu_pinning_cpu_assignment{balloon!="free"})
+            )
+    {{- if .Values.metrics.prometheusRule.alerts }}
+    # Alert rules — the concrete alerts documented in docs/observability.md.
+    - name: cpu-pinning-operator.alerts
+      rules:
+        - alert: CPUPinningWebhookBypass
+          # Every increment is one pod the operator meant to pin, admitted WITHOUT
+          # its balloon annotation after an internal webhook error, so it runs
+          # unpinned on shared cores until it is replaced. A matched pod under the
+          # default enforcePinning: true is DENIED on the same paths instead and is
+          # counted by cpu_pinning_webhook_admission_seconds_count{result="error"};
+          # CPUPinningWebhookLatencyHigh covers the apiserver-level fail-open, which
+          # never reaches this counter. The counter's labels are
+          # workload_namespace and reason, with no node, so the group is the tenant
+          # and the failing step.
+          #
+          # The counter is sparse: the first bypass in a tenant CREATES the series,
+          # and increase()/rate() over a series born inside their window read 0
+          # (last minus first over a flat series), so neither can see that first
+          # event at all. Subtracting the value one window back reads it, with
+          # `or (... * 0)` standing in for a series that did not exist then — the
+          # same idiom as cpu_pinning:cpu_free:per_numa above — and clamp_min keeping a
+          # counter reset from cancelling out another series in the same group.
+          # The 15m window outlives the 1m `for`, so the difference is still above
+          # 0 when the alert matures; `for` is not 0 so one evaluation cannot page
+          # on its own.
+          expr: >-
+            sum by (workload_namespace, reason) (
+              clamp_min(cpu_pinning_webhook_bypasses_total
+                - (cpu_pinning_webhook_bypasses_total offset 15m
+                   or (cpu_pinning_webhook_bypasses_total * 0)), 0)
+            ) > 0
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: Pods in {{`{{ $labels.workload_namespace }}`}} are running unpinned ({{`{{ $labels.reason }}`}})
+            description: >-
+              These pods were admitted without their balloon annotation, so they
+              share cores with everything else until they are replaced — and this
+              alert clears 15m after the last bypass while they keep running
+              unpinned. Read the manager log, fix the cause, then delete the pods
+              so admission runs again.
+              Remedy: docs/troubleshooting.md#cpupinningwebhookbypass
+        - alert: CPUPinningDriftEvictionsStuck
+          # Sustained pdb-blocked/error means drifted pods are not draining — the
+          # rollout is stuck, not merely paced.
+          expr: sum(rate(cpu_pinning_drift_evictions_total{outcome=~"pdb-blocked|error"}[15m])) > 0
+          for: 30m
+          labels:
+            severity: warning
+          annotations:
+            summary: Drift-driven evictions are not draining
+            description: >-
+              Pods drifted from their pinned config are stuck: eviction attempts
+              are persistently blocked by a PodDisruptionBudget or failing.
+              Remedy: docs/troubleshooting.md#cpupinningdriftevictionsstuck
+        - alert: CPUPinningPinningBlocked
+          # A pinned container the balloons plugin refused at CreateContainer, on
+          # first start or on a restart, so the pod reads Pending or Running but is
+          # never Ready. Nothing recovers it: it is bound to a node and
+          # CreateContainerError is not terminal, so the workload silently sits below
+          # its replica count. Reports are capped at one per blocker per 10m, and a
+          # refusal must persist 30s to report at all, so increase over 15m catches a
+          # pod that is still blocked without catching a node reboot that healed.
+          # Group on workload_namespace, the label the operator sets: the scrape
+          # target attaches its own namespace under `namespace`, so grouping on
+          # that would collapse every tenant into one alert naming the operator's
+          # namespace (see docs/observability.md).
+          # node is grouped too, because the summary names the machine and that is
+          # the machine an operator has to go and look at: one alert per
+          # (node, tenant, cause). Collapsing those into a single notification is
+          # Alertmanager's group_by, not this rule's job.
+          expr: sum by (node, workload_namespace, cause) (increase(cpu_pinning_pods_pinning_blocked_total[15m])) > 0
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: Pinned pods cannot start in {{`{{ $labels.workload_namespace }}`}} on {{`{{ $labels.node }}`}} ({{`{{ $labels.cause }}`}})
+            description: >-
+              The NRI balloons plugin refused these pods' containers, so their
+              workload runs below its replica count. The value counts refusal
+              reports, one per pod per 10 minutes, not pods; the PinningBlocked
+              Events name the pods.
+              Remedy: docs/troubleshooting.md#cpupinningpinningblocked
+        - alert: CPUPinningBalloonsPolicyReconcileErrors
+          # A node's BalloonsPolicy render/apply keeps failing, so its pinning
+          # config is not provisioned/updated. max by (node) collapses scrape
+          # labels so a node fires ONE alert, not one per scrape target.
+          expr: max by (node) (rate(cpu_pinning_balloonspolicy_reconcile_errors_total[15m])) > 0
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: BalloonsPolicy reconcile is failing on {{`{{ $labels.node }}`}}
+            description: >-
+              A node's BalloonsPolicy render or apply keeps failing, so its pinning
+              config is not being provisioned or updated. Inspect the node's Events
+              and the operator logs.
+              Remedy: docs/troubleshooting.md#cpupinningballoonspolicyreconcileerrors
+        - alert: CPUPinningReservedPoolOversubscribed
+          # max by (node) collapses scrape labels (job/instance/...) so a node
+          # scraped from multiple targets fires ONE alert, not one per target.
+          expr: max by (node) (cpu_pinning_reserved_pool_utilization_ratio) > 1
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: Reserved CPU pool is oversubscribed on {{`{{ $labels.node }}`}}
+            description: >-
+              Reserved-pool demand exceeds the provisioned reserved size on this
+              node; system and unpinned pods contend for reserved CPUs.
+              Remedy: docs/troubleshooting.md#cpupinningreservedpooloversubscribed
+        - alert: CPUPinningNodeFragmented
+          # Free CPUs exist but the largest balloon span can't absorb them (NUMA
+          # imbalance) — large-span placements will fail despite adequate free.
+          # max by (node) collapses scrape labels so it fires once per node.
+          expr: max by (node) (cpu_pinning_cpu_fragmentation) > 0
+          for: 1h
+          labels:
+            severity: info
+          annotations:
+            summary: Free CPUs the widest balloon span cannot use on {{`{{ $labels.node }}`}}
+            description: >-
+              The node's largest balloon span cannot use all free CPUs because
+              they are unevenly spread across NUMA nodes. A narrower pod still
+              places on them, so this limits the widest shape rather than the
+              machine, and needs no action unless a widest-span pod is waiting.
+              Remedy: docs/troubleshooting.md#cpupinningnodefragmented
+        - alert: CPUPinningWebhookLatencyHigh
+          # p99 admission latency approaching the apiserver's 10s webhook timeout.
+          # A request that times out fails open under failurePolicy: Ignore and
+          # admits the pod unmutated at the apiserver level, without being
+          # counted by cpu_pinning_webhook_bypasses_total, so this alert should
+          # fire before such fail-open timeouts occur.
+          expr: histogram_quantile(0.99, sum by (le) (rate(cpu_pinning_webhook_admission_seconds_bucket[5m]))) > 8
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: Webhook p99 latency approaching 10s timeout
+            description: >-
+              The mutating webhook's p99 admission latency is above 8s, against a
+              5s target, and close to the 10s the apiserver allows. Requests that
+              time out fail open (failurePolicy: Ignore) and admit pods unpinned.
+              Check apiserver round-trip time and node/capacity lookup latency.
+              Remedy: docs/troubleshooting.md#cpupinningwebhooklatencyhigh
+        - alert: CPUPinningNodeProvisionFailed
+          # A node's topology probe failed, so it never joins (or drops out of) the
+          # pinning pool until this clears. A BalloonsPolicy the operator could not
+          # apply raises CPUPinningBalloonsPolicyReconcileErrors instead.
+          # outcome="failed" mirrors the NodeProvisionFailed constant in
+          # internal/metrics/metrics.go. The probe is retried every minute while it
+          # fails, so the counter keeps rising and the 15m increase keeps this
+          # firing for as long as the machine is broken.
+          # max by (node) collapses the scrape labels, so the machine that failed
+          # fires ONE alert however many replicas and targets export the counter,
+          # and the summary can name it. Two machines still fire two alerts: node
+          # is the dimension an operator acts on.
+          expr: max by (node) (increase(cpu_pinning_node_provisioning_total{outcome="failed"}[15m])) > 0
+          for: 1m
+          labels:
+            severity: warning
+          annotations:
+            summary: Node topology provisioning failed on {{`{{ $labels.node }}`}}
+            description: >-
+              This node's CPU topology probe failed, so the operator cannot render
+              its BalloonsPolicy. The node will not join the pinning pool until this
+              resolves. Check the operator logs and the node's Events.
+              Remedy: docs/troubleshooting.md#cpupinningnodeprovisionfailed
+    {{- end }}
+{{- end }}

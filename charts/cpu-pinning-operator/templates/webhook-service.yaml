@@ -1,0 +1,25 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "cpu-pinning-operator.fullname" . }}-{{ .Values.webhook.service.name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "cpu-pinning-operator.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  {{- with .Values.webhook.service.sessionAffinity }}
+  {{- if not (has . (list "None" "ClientIP")) }}
+  {{- fail (printf "webhook.service.sessionAffinity must be \"None\" or \"ClientIP\", got %q" .) }}
+  {{- end }}
+  sessionAffinity: {{ . }}
+  {{- end }}
+  ports:
+    - port: {{ .Values.webhook.service.port }}
+      targetPort: webhook-server
+      protocol: TCP
+      name: webhook-server
+  selector:
+    {{- include "cpu-pinning-operator.selectorLabels" . | nindent 4 }}
