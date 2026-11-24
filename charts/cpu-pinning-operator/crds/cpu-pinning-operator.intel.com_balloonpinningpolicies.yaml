@@ -1,0 +1,432 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.21.0
+  name: balloonpinningpolicies.cpu-pinning-operator.intel.com
+spec:
+  group: cpu-pinning-operator.intel.com
+  names:
+    kind: BalloonPinningPolicy
+    listKind: BalloonPinningPolicyList
+    plural: balloonpinningpolicies
+    shortNames:
+    - bpp
+    singular: balloonpinningpolicy
+  scope: Cluster
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: BalloonPinningPolicy is the Schema for the balloonpinningpolicies
+          API.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: |-
+              BalloonPinningPolicySpec defines the desired state of BalloonPinningPolicy.
+              It holds only per-workload knobs; node-global settings (cpuAllocation,
+              reserved pool, node exclusion, webhook failurePolicy) live on the
+              BalloonsClusterConfig singleton.
+            properties:
+              capacityCheck:
+                description: CapacityCheck configures the per-NUMA capacity check
+                  applied to matched pods.
+                properties:
+                  mode:
+                    default: warn
+                    description: |-
+                      Mode selects how a capacity-check failure (a request that cannot fit the
+                      target node's per-NUMA capacity for the computed span) is handled:
+                        warn (default) — admit the pod but emit a Warning event;
+                        enforce — deny admission;
+                        off — skip the check entirely.
+                      enforce also denies a pod whose reservation the leader could not commit;
+                      warn and off fall back to accounting it in the local replica's store.
+                    enum:
+                    - enforce
+                    - warn
+                    - "off"
+                    type: string
+                type: object
+              driftPolicy:
+                default: eventsOnly
+                description: |-
+                  DriftPolicy controls what happens to running pinned pods when the pinning
+                  config changes (the webhook only pins at CREATE). Every stale pod gets a
+                  Warning "Drifted" event and counts on cpu_pinning_pods_drifted_total:
+                    eventsOnly (default) — report only; re-pinning needs a restart or rollout;
+                    restart — also evict drifted pods so they re-admit with the new config
+                      (PDB-aware and rate-paced).
+                enum:
+                - eventsOnly
+                - restart
+                type: string
+              guardActivePods:
+                description: |-
+                  GuardActivePods enables a validating admission guard for this policy. A
+                  pinned pod keeps its cpuset when its policy is deleted or narrowed, but
+                  silently loses its guarantee. When true, the webhook rejects:
+                    delete — while status.boundPods is non-empty;
+                    update — when the new match/namespaces would stop covering a pod the
+                      current policy holds.
+                  An update that turns the guard off is always allowed, so held pods can be
+                  released deliberately before a delete or narrowing edit. nil or false
+                  (default) disables the guard.
+                type: boolean
+              intent:
+                description: |-
+                  Intent declares how the webhook derives a matched pod's placement intent
+                  (span, multiplier, co-locate).
+                properties:
+                  coLocate:
+                    default: ""
+                    description: |-
+                      CoLocate controls how a workload's span is spread across NUMA nodes:
+                        "" (default) — the placement engine chooses (bin-pack by live per-NUMA
+                          headroom);
+                        package — keep the whole span on one CPU package (lowest cross-NUMA latency);
+                        numa — spread the span across NUMA nodes (memory bandwidth).
+                    enum:
+                    - package
+                    - numa
+                    - ""
+                    type: string
+                  multiplier:
+                    description: |-
+                      Multiplier is an optional integer source multiplied onto Span before the
+                      span is snapped to {1,2,4,8}. Omit it (or leave Default=1) when the
+                      workload has no secondary parallel dimension.
+                    properties:
+                      annotation:
+                        description: |-
+                          Annotation is a pod annotation key holding a stringified integer, e.g.
+                          "cpu-pinning-operator.intel.com/tp". Highest precedence.
+                        type: string
+                      argRegex:
+                        description: |-
+                          ArgRegex is a Go regexp (RE2 syntax; see https://pkg.go.dev/regexp/syntax)
+                          evaluated against the joined container args string. The first non-empty
+                          numeric capture group is the value. RE2 does not support backreferences
+                          or lookaround — express alternatives with `|` instead.
+                          Examples:
+                            vLLM TP:  "(?:^|\\s)(?:--tensor-parallel-size|-tp)(?:=|\\s+)(\\d+)"
+                            SGLang:   "(?:^|\\s)--tp-size(?:=|\\s+)(\\d+)"
+                          (?:^|\\s) anchors the flag to the start of an argument, so a model path
+                          like "/models/llama-tp=8" is not read as a flag.
+                        type: string
+                      default:
+                        default: 1
+                        description: |-
+                          Default is the value used when no configured source produces an integer.
+                          Must be ≥ 1 (an intent value of 0 would produce an empty span).
+                        minimum: 1
+                        type: integer
+                      envVar:
+                        description: |-
+                          EnvVar is a container environment variable name whose value is a
+                          stringified integer, e.g. "VLLM_TENSOR_PARALLEL_SIZE".
+                        type: string
+                    type: object
+                  span:
+                    description: |-
+                      Span is the primary parallel-size hint that sizes the span-N balloon a
+                      matched pod is pinned to. If omitted, the span is 1. Examples:
+                        vLLM tensor-parallel:  annotation=".../tp", argRegex="(?:^|\s)(?:--tensor-parallel-size|-tp)(?:=|\s+)(\d+)", envVar="VLLM_TENSOR_PARALLEL_SIZE"
+                        SGLang tp-size:        argRegex="(?:^|\s)--tp-size(?:=|\s+)(\d+)"
+                    properties:
+                      annotation:
+                        description: |-
+                          Annotation is a pod annotation key holding a stringified integer, e.g.
+                          "cpu-pinning-operator.intel.com/tp". Highest precedence.
+                        type: string
+                      argRegex:
+                        description: |-
+                          ArgRegex is a Go regexp (RE2 syntax; see https://pkg.go.dev/regexp/syntax)
+                          evaluated against the joined container args string. The first non-empty
+                          numeric capture group is the value. RE2 does not support backreferences
+                          or lookaround — express alternatives with `|` instead.
+                          Examples:
+                            vLLM TP:  "(?:^|\\s)(?:--tensor-parallel-size|-tp)(?:=|\\s+)(\\d+)"
+                            SGLang:   "(?:^|\\s)--tp-size(?:=|\\s+)(\\d+)"
+                          (?:^|\\s) anchors the flag to the start of an argument, so a model path
+                          like "/models/llama-tp=8" is not read as a flag.
+                        type: string
+                      default:
+                        default: 1
+                        description: |-
+                          Default is the value used when no configured source produces an integer.
+                          Must be ≥ 1 (an intent value of 0 would produce an empty span).
+                        minimum: 1
+                        type: integer
+                      envVar:
+                        description: |-
+                          EnvVar is a container environment variable name whose value is a
+                          stringified integer, e.g. "VLLM_TENSOR_PARALLEL_SIZE".
+                        type: string
+                    type: object
+                type: object
+              match:
+                description: Match defines which pods/containers are pinning targets.
+                properties:
+                  byContainerName:
+                    description: |-
+                      ByContainerName lists container names that mark a pod as a pinning target.
+                      An entry containing a shell glob metacharacter (*, ?, [) is matched as a
+                      glob against container names; otherwise it is an exact name.
+                    items:
+                      type: string
+                    type: array
+                  byPodLabels:
+                    additionalProperties:
+                      type: string
+                    description: ByPodLabels is a set of label key/value pairs; a
+                      pod carrying any of them is a pinning target.
+                    type: object
+                  containerSelection:
+                    default: wholePod
+                    description: |-
+                      ContainerSelection picks what to pin when a match hits more than one
+                      container (a byPodLabels match, or byContainerName entries that hit several):
+                        wholePod (default) — pin the whole pod, sizing the balloon from the pod's
+                          aggregate CPU request. A multi-hit byContainerName match is ambiguous
+                          here, so the pod is skipped with a Warning event.
+                        largestContainer — pin only the candidate with the highest CPU request
+                          (ties broken by spec order); sidecars stay in the reserved pool. If that
+                          container fails the whole-core guard the pod is skipped.
+                      A single-container match is unaffected.
+                    enum:
+                    - wholePod
+                    - largestContainer
+                    type: string
+                type: object
+              namespaceSelector:
+                description: |-
+                  NamespaceSelector additionally targets every namespace whose labels match,
+                  on top of Namespaces. nil (default) leaves targeting to Namespaces alone.
+                  As in Kubernetes, an empty selector ({}) matches every namespace. The
+                  selector is resolved to namespace names at reconcile time, and a namespace
+                  relabel triggers a reconcile, so changes apply after a short lag.
+                properties:
+                  matchExpressions:
+                    description: matchExpressions is a list of label selector requirements.
+                      The requirements are ANDed.
+                    items:
+                      description: |-
+                        A label selector requirement is a selector that contains values, a key, and an operator that
+                        relates the key and values.
+                      properties:
+                        key:
+                          description: key is the label key that the selector applies
+                            to.
+                          type: string
+                        operator:
+                          description: |-
+                            operator represents a key's relationship to a set of values.
+                            Valid operators are In, NotIn, Exists and DoesNotExist.
+                          type: string
+                        values:
+                          description: |-
+                            values is an array of string values. If the operator is In or NotIn,
+                            the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                            the values array must be empty. This array is replaced during a strategic
+                            merge patch.
+                          items:
+                            type: string
+                          type: array
+                          x-kubernetes-list-type: atomic
+                      required:
+                      - key
+                      - operator
+                      type: object
+                    type: array
+                    x-kubernetes-list-type: atomic
+                  matchLabels:
+                    additionalProperties:
+                      type: string
+                    description: |-
+                      matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                      map is equivalent to an element of matchExpressions, whose key field is "key", the
+                      operator is "In", and the values array contains only "value". The requirements are ANDed.
+                    type: object
+                type: object
+                x-kubernetes-map-type: atomic
+              namespaces:
+                description: Namespaces lists exact names and/or glob patterns; empty
+                  = match none (safe default).
+                items:
+                  type: string
+                type: array
+              scheduling:
+                description: Scheduling holds per-workload node-selection knobs (enforcePinning,
+                  nodeFeatures).
+                properties:
+                  enforcePinning:
+                    default: true
+                    description: |-
+                      EnforcePinning, when true (default), injects a required nodeAffinity so
+                      matched pods only schedule on balloons-enabled, non-excluded nodes (Pending
+                      if none), and makes the webhook deny a matched pod it could not pin because
+                      of a failure: no balloons-enabled node yet, or a failed Node/topology/capacity
+                      read. The owning controller retries. A not-ready balloons plugin is not
+                      denied under capacityCheck.mode warn/off: the pod is admitted pinned and held
+                      by the wait-for-balloons init container; mode enforce denies it.
+
+                      Pods that are unpinnable by design are still admitted unpinned, with a
+                      NotPinned event and a cpu_pinning_pods_skipped_total count: a fractional or
+                      non-guaranteed CPU request, an ambiguous multi-container match, or a pod
+                      pre-bound (spec.nodeName) to a node that is not balloons-enabled (so static
+                      pods on excluded nodes are not blocked). A request the webhook cannot decode
+                      is admitted unmutated.
+
+                      Pair with webhook.failurePolicy: Fail to also cover requests the webhook
+                      never sees. Set false for best-effort: matched pods may schedule anywhere
+                      and are admitted unpinned wherever the webhook cannot pin them.
+                    type: boolean
+                  nodeFeatures:
+                    additionalProperties:
+                      description: NodeFeatureMode is how a single node-feature label
+                        steers pod placement.
+                      enum:
+                      - prefer
+                      - require
+                      - ignore
+                      type: string
+                    description: |-
+                      NodeFeatures maps a node label key to an affinity mode that steers
+                      matched pods toward nodes carrying that label:
+                        prefer  — soft preference (weight 100 preferred nodeAffinity);
+                        require — hard requirement (required nodeAffinity; the pod stays
+                                  Pending if no node carries the label);
+                        ignore  — no affinity emitted (useful to disable a chart default).
+                      The chart default is {"cpu-pinning-operator.intel.com/amx": "prefer"}.
+                    type: object
+                type: object
+            type: object
+          status:
+            description: |-
+              BalloonPinningPolicyStatus defines the observed state of BalloonPinningPolicy.
+              The pinning-pool inventory lives on the BalloonsClusterConfig singleton.
+            properties:
+              boundPods:
+                description: |-
+                  BoundPods lists the operator-pinned pods this policy holds (ns/name →
+                  balloon), sorted by namespace then name. Capped at the first 100 entries
+                  to keep the status object under etcd's per-object size limit;
+                  BoundPodsTotal has the uncapped count.
+                items:
+                  description: |-
+                    BoundPod identifies one pod a policy currently holds pinned and the balloon
+                    it is bound to.
+                  properties:
+                    balloon:
+                      description: Balloon is the balloon type the pod is bound to
+                        (e.g. "balloon-span2").
+                      type: string
+                    name:
+                      description: Name is the pinned pod's name.
+                      type: string
+                    namespace:
+                      description: Namespace is the pinned pod's namespace.
+                      type: string
+                  required:
+                  - balloon
+                  - name
+                  - namespace
+                  type: object
+                type: array
+              boundPodsTotal:
+                description: |-
+                  BoundPodsTotal is the true count of operator-pinned pods this policy
+                  holds, including any omitted from the capped BoundPods list.
+                type: integer
+              conditions:
+                description: |-
+                  Conditions follows the standard Kubernetes conditions convention. The
+                  Ready condition reflects whether the pinning pool has any provisioned
+                  nodes (from the cluster config) for this policy to place pods on.
+                items:
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
+              observedGeneration:
+                description: ObservedGeneration is the .metadata.generation last reconciled.
+                format: int64
+                type: integer
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

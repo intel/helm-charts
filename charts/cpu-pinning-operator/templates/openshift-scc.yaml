@@ -1,0 +1,107 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+# OpenShift SecurityContextConstraints (SCC) enablement. Everything in this file
+# is gated behind .Values.openShift.enabled — on vanilla Kubernetes (the default)
+# nothing here renders, so those clusters are entirely unaffected. See the
+# openShift block in values.yaml and the chart README ("Installing on OpenShift /
+# OKD") for the rationale.
+{{- if .Values.openShift.enabled }}
+---
+# Dedicated ServiceAccount the topology-probe pod runs as. The probe's SCC (below)
+# is bound to THIS named SA rather than the namespace `default` SA, so the grant
+# is scoped and least-privilege. Wired into the manager as PROBE_SERVICE_ACCOUNT
+# (configmap.yaml) so buildProbePod stamps it onto the probe pod.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "cpu-pinning-operator.probeServiceAccountName" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "cpu-pinning-operator.labels" . | nindent 4 }}
+# The probe reads only sysfs/proc and never calls the Kubernetes API, so it gets
+# no auto-mounted SA token. buildProbePod declines the token on the pod as well,
+# which is what covers the vanilla-Kubernetes path (no dedicated probe SA there).
+automountServiceAccountToken: false
+---
+# Custom least-privilege SCC for the topology probe. No built-in OCP SCC admits
+# the probe's securityContext: it sets a fixed non-root uid (1000) AND the
+# RuntimeDefault seccomp profile, and restricted-v2 forces a uid from the
+# namespace range while anyuid/hostmount-anyuid forbid the seccomp profile. This
+# SCC permits EXACTLY that context — fixed uid 1000, RuntimeDefault seccomp — and
+# NOTHING else: no privilege, no privilege escalation, all capabilities dropped,
+# no host namespaces, a required read-only root filesystem, and no volumes of any
+# type (the probe only reads world-readable sysfs, writes nothing, and declines
+# its service-account token, so it declares no volumes at all).
+apiVersion: security.openshift.io/v1
+kind: SecurityContextConstraints
+metadata:
+  name: {{ include "cpu-pinning-operator.probeSCCName" . }}
+  labels:
+    {{- include "cpu-pinning-operator.labels" . | nindent 4 }}
+  annotations:
+    kubernetes.io/description: >-
+      Least-privilege SCC for the cpu-pinning-operator topology probe: fixed
+      non-root uid 1000 with the RuntimeDefault seccomp profile, a read-only
+      root filesystem, no privilege and no volumes. Bound only to the
+      operator's probe ServiceAccount.
+allowPrivilegedContainer: false
+allowPrivilegeEscalation: false
+allowHostDirVolumePlugin: false
+allowHostNetwork: false
+allowHostPorts: false
+allowHostPID: false
+allowHostIPC: false
+# The probe writes nothing, so require the read-only root filesystem it requests.
+readOnlyRootFilesystem: true
+requiredDropCapabilities:
+  - ALL
+allowedCapabilities: []
+defaultAddCapabilities: []
+# Permit exactly the fixed non-root uid the probe requests (min == max == 1000).
+runAsUser:
+  type: MustRunAsRange
+  uidRangeMin: 1000
+  uidRangeMax: 1000
+seLinuxContext:
+  type: MustRunAs
+fsGroup:
+  type: RunAsAny
+supplementalGroups:
+  type: RunAsAny
+# The probe explicitly sets seccompProfile: RuntimeDefault; permit only that.
+seccompProfiles:
+  - runtime/default
+# The probe pod declares no volumes — it reads sysfs from the container's own
+# mount namespace and declines its service-account token — so permit none.
+volumes: []
+---
+# RBAC-style grant of `use` on the probe SCC, scoped to the probe SA by name.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "cpu-pinning-operator.fullname" . }}-probe-scc-use
+  labels:
+    {{- include "cpu-pinning-operator.labels" . | nindent 4 }}
+rules:
+  - apiGroups: ["security.openshift.io"]
+    resources: ["securitycontextconstraints"]
+    resourceNames: [{{ include "cpu-pinning-operator.probeSCCName" . | quote }}]
+    verbs: ["use"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "cpu-pinning-operator.fullname" . }}-probe-scc-use
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "cpu-pinning-operator.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "cpu-pinning-operator.fullname" . }}-probe-scc-use
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "cpu-pinning-operator.probeServiceAccountName" . }}
+    namespace: {{ .Release.Namespace }}
+{{- end }}

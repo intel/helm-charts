@@ -1,0 +1,43 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+{{- if .Values.balloonPinningPolicy.create }}
+{{- $p := .Values.balloonPinningPolicy }}
+{{- $m := $p.match | default dict }}
+{{- if not (and (or $m.byContainerName $m.byPodLabels) (or $p.namespaces (hasKey $p "namespaceSelector"))) }}
+{{- fail "balloonPinningPolicy.create=true needs a target. Set balloonPinningPolicy.match (byContainerName or byPodLabels) AND balloonPinningPolicy.namespaces (or namespaceSelector), e.g. --set 'balloonPinningPolicy.match.byContainerName={vllm}' --set 'balloonPinningPolicy.namespaces={inference}', or put them in a values file (see docs/examples/values/kserve.yaml). To manage BalloonPinningPolicy objects yourself, set balloonPinningPolicy.create=false." }}
+{{- end }}
+apiVersion: cpu-pinning-operator.intel.com/v1alpha1
+kind: BalloonPinningPolicy
+metadata:
+  name: {{ .Values.balloonPinningPolicy.name }}
+  labels:
+    {{- include "cpu-pinning-operator.labels" . | nindent 4 }}
+spec:
+  match:
+    {{- toYaml .Values.balloonPinningPolicy.match | nindent 4 }}
+  namespaces:
+    {{- toYaml .Values.balloonPinningPolicy.namespaces | nindent 4 }}
+  {{- if hasKey .Values.balloonPinningPolicy "namespaceSelector" }}
+  namespaceSelector:
+    {{- toYaml .Values.balloonPinningPolicy.namespaceSelector | nindent 4 }}
+  {{- end }}
+  {{- with .Values.balloonPinningPolicy.intent }}
+  intent:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with .Values.balloonPinningPolicy.capacityCheck }}
+  capacityCheck:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with .Values.balloonPinningPolicy.scheduling }}
+  scheduling:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with .Values.balloonPinningPolicy.driftPolicy }}
+  driftPolicy: {{ . }}
+  {{- end }}
+  {{- if hasKey .Values.balloonPinningPolicy "guardActivePods" }}
+  guardActivePods: {{ .Values.balloonPinningPolicy.guardActivePods }}
+  {{- end }}
+{{- end }}

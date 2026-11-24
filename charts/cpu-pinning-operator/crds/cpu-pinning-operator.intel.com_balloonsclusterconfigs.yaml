@@ -1,0 +1,856 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.21.0
+  name: balloonsclusterconfigs.cpu-pinning-operator.intel.com
+spec:
+  group: cpu-pinning-operator.intel.com
+  names:
+    kind: BalloonsClusterConfig
+    listKind: BalloonsClusterConfigList
+    plural: balloonsclusterconfigs
+    shortNames:
+    - bcc
+    singular: balloonsclusterconfig
+  scope: Cluster
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .status.provisionedNodes
+      name: Nodes
+      type: integer
+    - jsonPath: .spec.balloon.cpuAllocation
+      name: CPUAllocation
+      type: string
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: |-
+          BalloonsClusterConfig is the cluster-scoped singleton holding the node-global
+          pinning configuration. It must be named "cluster".
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: |-
+              BalloonsClusterConfigSpec holds the node-global pinning settings: how balloon
+              types are generated on every node and how the mutating webhook fails.
+            properties:
+              balloon:
+                description: |-
+                  Balloon holds the cluster-default balloon-generation settings (hyperthread
+                  handling and reserved-pool sizing), applied to every node that matches no
+                  entry in NodeConfigOverrides.
+                properties:
+                  cpuAllocation:
+                    description: |-
+                      CPUAllocation selects the hyperthread handling mode:
+                        physical-cores (operator default) — hyperthread siblings are excluded
+                          from the pool (availableResources: exclude-cpuset); a request for N
+                          CPUs consumes N physical cores;
+                        hyperthreads — the full logical-CPU pool is used.
+                      Unset means inherit: the operator default at the cluster level, or the
+                      cluster default in a per-node override.
+                    enum:
+                    - physical-cores
+                    - hyperthreads
+                    type: string
+                  htSiblingPolicy:
+                    default: exclude
+                    description: |-
+                      HTSiblingPolicy selects what happens to the hyperthread siblings of pinned
+                      cores in physical-cores mode:
+                        exclude (default) — full isolation: siblings are removed from the
+                          allocatable pool (availableResources: exclude-cpuset), so no workload
+                          lands on the second thread of a pinned core;
+                        reserved — density mode: siblings are placed in the reserved pool's
+                          cpuset (reservedResources.cpu), so non-pinned work can use them while
+                          they stay out of the exclusive balloons. Recovers roughly half the
+                          cores exclude removes, at the cost of noisy-neighbor interference on
+                          the shared core. The reserved pool size is then the sibling count, so
+                          the reserved sizing spec is not applied.
+                      No effect in hyperthreads mode.
+                    enum:
+                    - exclude
+                    - reserved
+                    type: string
+                  packing:
+                    description: |-
+                      Packing selects how the webhook steers an unscheduled pod among the nodes
+                      that fit its request, when live headroom data is available:
+                        spread (default) — the node with the most free room. Smaller blast
+                          radius, but free room fragments over time so large spans stop fitting
+                          (see the cpu_pinning_cpu_fragmentation metric);
+                        binpack — the node left least fragmented after placement, filling
+                          partly-used nodes first. Keeps large-span capacity contiguous at the
+                          cost of a larger blast radius.
+                      Never changes a pod's request or its reserved per-NUMA share. Cluster-global:
+                      honored only on spec.balloon, not in a per-node override. Unset means spread.
+                    enum:
+                    - spread
+                    - binpack
+                    type: string
+                  reserved:
+                    description: |-
+                      Reserved sizes the reserved CPU pool (system / non-model components). If
+                      omitted, defaults to 12 logical CPUs. See ReservedSizingSpec. Ignored in
+                      density mode (htSiblingPolicy=reserved), where the reserved pool is the
+                      HT-sibling set.
+                    properties:
+                      cpus:
+                        description: Cpus is an explicit logical-CPU count for the
+                          reserved pool.
+                        minimum: 0
+                        type: integer
+                      measured:
+                        description: |-
+                          Measured sizes the reserved pool per node from observed demand (the sum
+                          of CPU requests of the node's non-pinned pods) plus headroom, returning
+                          unused reserved cores to the pinning pool. See MeasuredSizingSpec.
+                        properties:
+                          headroomPercent:
+                            default: 50
+                            description: |-
+                              HeadroomPercent is the slack added above measured usage, as a percentage.
+                              50 (default) reserves 1.5× observed demand. 0 tracks usage exactly (no
+                              slack); larger values absorb bursts at the cost of pinning capacity.
+                            maximum: 1000
+                            minimum: 0
+                            type: integer
+                          min:
+                            default: 4
+                            description: |-
+                              Min is the floor for the measured result, in logical CPUs, and the
+                              cold-start size before any usage is observed. Defaults to 4.
+                            minimum: 0
+                            type: integer
+                        type: object
+                      percent:
+                        description: |-
+                          Percent is a per-node percentage of physical cores allocated to the
+                          reserved pool.
+                        maximum: 100
+                        minimum: 0
+                        type: integer
+                    type: object
+                  reservedNamespaces:
+                    description: |-
+                      ReservedNamespaces lists namespace globs whose unpinned pods are routed to
+                      the exclusive reserved CPU pool, emitted verbatim as the BalloonsPolicy's
+                      reservedPoolNamespaces. The NRI plugin always routes "kube-system" to
+                      reserved, and puts any other unmatched pod on its shared "default"
+                      balloon, so scoping this list never strands a pod.
+
+                        - Unset (nil) — ["*", "kube-system"]: every unpinned pod goes to
+                          reserved. Right for a dedicated inference node.
+                        - Explicit list (e.g. ["inference"]) — only those namespaces go to
+                          reserved; other unpinned pods land on the shared default balloon.
+                        - Explicit empty list ([]) — nothing beyond kube-system goes to reserved.
+
+                      On a shared/OpenShift node "*" funnels every platform pod into the
+                      reserved pool and can exhaust it so pinned pods get no balloon; scope or
+                      empty this list there. Cluster-global: honored only on spec.balloon, not in
+                      a per-node override.
+                    items:
+                      type: string
+                    type: array
+                    x-kubernetes-list-type: atomic
+                type: object
+                x-kubernetes-validations:
+                - message: at most one of reserved.cpus, reserved.percent, reserved.measured
+                    may be set
+                  rule: '!has(self.reserved) || ((has(self.reserved.cpus)?1:0) + (has(self.reserved.percent)?1:0)
+                    + (has(self.reserved.measured)?1:0)) <= 1'
+              classProfiles:
+                additionalProperties:
+                  description: |-
+                    BalloonSpec holds the node-global balloon-generation settings, used both as
+                    the cluster default (spec.balloon) and as a per-node override block. The
+                    per-node fields (cpuAllocation, reserved) carry no CRD defaults: in an override
+                    an unset field means "inherit the cluster default", and a CRD default would
+                    silently override it. Empty values are normalized to the operator defaults in
+                    code. htSiblingPolicy is cluster-global and defaults to exclude.
+
+                    Per-node overrides honor only cpuAllocation and reserved; packing and
+                    reservedNamespaces are cluster-global and read from spec.balloon only.
+                  properties:
+                    cpuAllocation:
+                      description: |-
+                        CPUAllocation selects the hyperthread handling mode:
+                          physical-cores (operator default) — hyperthread siblings are excluded
+                            from the pool (availableResources: exclude-cpuset); a request for N
+                            CPUs consumes N physical cores;
+                          hyperthreads — the full logical-CPU pool is used.
+                        Unset means inherit: the operator default at the cluster level, or the
+                        cluster default in a per-node override.
+                      enum:
+                      - physical-cores
+                      - hyperthreads
+                      type: string
+                    htSiblingPolicy:
+                      default: exclude
+                      description: |-
+                        HTSiblingPolicy selects what happens to the hyperthread siblings of pinned
+                        cores in physical-cores mode:
+                          exclude (default) — full isolation: siblings are removed from the
+                            allocatable pool (availableResources: exclude-cpuset), so no workload
+                            lands on the second thread of a pinned core;
+                          reserved — density mode: siblings are placed in the reserved pool's
+                            cpuset (reservedResources.cpu), so non-pinned work can use them while
+                            they stay out of the exclusive balloons. Recovers roughly half the
+                            cores exclude removes, at the cost of noisy-neighbor interference on
+                            the shared core. The reserved pool size is then the sibling count, so
+                            the reserved sizing spec is not applied.
+                        No effect in hyperthreads mode.
+                      enum:
+                      - exclude
+                      - reserved
+                      type: string
+                    packing:
+                      description: |-
+                        Packing selects how the webhook steers an unscheduled pod among the nodes
+                        that fit its request, when live headroom data is available:
+                          spread (default) — the node with the most free room. Smaller blast
+                            radius, but free room fragments over time so large spans stop fitting
+                            (see the cpu_pinning_cpu_fragmentation metric);
+                          binpack — the node left least fragmented after placement, filling
+                            partly-used nodes first. Keeps large-span capacity contiguous at the
+                            cost of a larger blast radius.
+                        Never changes a pod's request or its reserved per-NUMA share. Cluster-global:
+                        honored only on spec.balloon, not in a per-node override. Unset means spread.
+                      enum:
+                      - spread
+                      - binpack
+                      type: string
+                    reserved:
+                      description: |-
+                        Reserved sizes the reserved CPU pool (system / non-model components). If
+                        omitted, defaults to 12 logical CPUs. See ReservedSizingSpec. Ignored in
+                        density mode (htSiblingPolicy=reserved), where the reserved pool is the
+                        HT-sibling set.
+                      properties:
+                        cpus:
+                          description: Cpus is an explicit logical-CPU count for the
+                            reserved pool.
+                          minimum: 0
+                          type: integer
+                        measured:
+                          description: |-
+                            Measured sizes the reserved pool per node from observed demand (the sum
+                            of CPU requests of the node's non-pinned pods) plus headroom, returning
+                            unused reserved cores to the pinning pool. See MeasuredSizingSpec.
+                          properties:
+                            headroomPercent:
+                              default: 50
+                              description: |-
+                                HeadroomPercent is the slack added above measured usage, as a percentage.
+                                50 (default) reserves 1.5× observed demand. 0 tracks usage exactly (no
+                                slack); larger values absorb bursts at the cost of pinning capacity.
+                              maximum: 1000
+                              minimum: 0
+                              type: integer
+                            min:
+                              default: 4
+                              description: |-
+                                Min is the floor for the measured result, in logical CPUs, and the
+                                cold-start size before any usage is observed. Defaults to 4.
+                              minimum: 0
+                              type: integer
+                          type: object
+                        percent:
+                          description: |-
+                            Percent is a per-node percentage of physical cores allocated to the
+                            reserved pool.
+                          maximum: 100
+                          minimum: 0
+                          type: integer
+                      type: object
+                    reservedNamespaces:
+                      description: |-
+                        ReservedNamespaces lists namespace globs whose unpinned pods are routed to
+                        the exclusive reserved CPU pool, emitted verbatim as the BalloonsPolicy's
+                        reservedPoolNamespaces. The NRI plugin always routes "kube-system" to
+                        reserved, and puts any other unmatched pod on its shared "default"
+                        balloon, so scoping this list never strands a pod.
+
+                          - Unset (nil) — ["*", "kube-system"]: every unpinned pod goes to
+                            reserved. Right for a dedicated inference node.
+                          - Explicit list (e.g. ["inference"]) — only those namespaces go to
+                            reserved; other unpinned pods land on the shared default balloon.
+                          - Explicit empty list ([]) — nothing beyond kube-system goes to reserved.
+
+                        On a shared/OpenShift node "*" funnels every platform pod into the
+                        reserved pool and can exhaust it so pinned pods get no balloon; scope or
+                        empty this list there. Cluster-global: honored only on spec.balloon, not in
+                        a per-node override.
+                      items:
+                        type: string
+                      type: array
+                      x-kubernetes-list-type: atomic
+                  type: object
+                  x-kubernetes-validations:
+                  - message: at most one of reserved.cpus, reserved.percent, reserved.measured
+                      may be set
+                    rule: '!has(self.reserved) || ((has(self.reserved.cpus)?1:0) +
+                      (has(self.reserved.percent)?1:0) + (has(self.reserved.measured)?1:0))
+                      <= 1'
+                description: |-
+                  ClassProfiles maps a node class (mixed-cpu-amx-gpu, cpu-amx, gpu-only,
+                  cpu-only) to the balloon block used as the base for nodes of that class.
+                  The effective per-node config is layered per-field in this order: cluster
+                  default (spec.balloon), matching class profile, matching
+                  NodeConfigOverride. A class with no entry keeps the cluster default. Only
+                  cpuAllocation and reserved are honored per node; packing, htSiblingPolicy
+                  and reservedNamespaces are read from spec.balloon only.
+
+                  Capped at 16 entries to bound the CEL validation cost of the reused
+                  BalloonSpec across the map.
+                maxProperties: 16
+                type: object
+              classification:
+                description: |-
+                  Classification tunes automatic node classification. The Node Reconciler
+                  classifies every provisioned node as mixed-cpu-amx-gpu, cpu-amx, gpu-only
+                  or cpu-only from its GPU presence, AMX support and logical-CPU count,
+                  publishes the result as the node-class label, and uses the matching
+                  ClassProfiles entry, if any, as the node's balloon base. Classification
+                  always runs; an empty block uses the built-in defaults.
+                properties:
+                  amxNodeSelector:
+                    description: |-
+                      AMXNodeSelector marks AMX nodes intended for CPU inference: a matching
+                      non-GPU AMX node is cpu-amx regardless of CPU count. nil means AMX nodes
+                      reach cpu-amx only via the CPUAMXMinLogicalCPUs threshold.
+                    properties:
+                      matchExpressions:
+                        description: matchExpressions is a list of label selector
+                          requirements. The requirements are ANDed.
+                        items:
+                          description: |-
+                            A label selector requirement is a selector that contains values, a key, and an operator that
+                            relates the key and values.
+                          properties:
+                            key:
+                              description: key is the label key that the selector
+                                applies to.
+                              type: string
+                            operator:
+                              description: |-
+                                operator represents a key's relationship to a set of values.
+                                Valid operators are In, NotIn, Exists and DoesNotExist.
+                              type: string
+                            values:
+                              description: |-
+                                values is an array of string values. If the operator is In or NotIn,
+                                the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                the values array must be empty. This array is replaced during a strategic
+                                merge patch.
+                              items:
+                                type: string
+                              type: array
+                              x-kubernetes-list-type: atomic
+                          required:
+                          - key
+                          - operator
+                          type: object
+                        type: array
+                        x-kubernetes-list-type: atomic
+                      matchLabels:
+                        additionalProperties:
+                          type: string
+                        description: |-
+                          matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                          map is equivalent to an element of matchExpressions, whose key field is "key", the
+                          operator is "In", and the values array contains only "value". The requirements are ANDed.
+                        type: object
+                    type: object
+                    x-kubernetes-map-type: atomic
+                  cpuAMXMinLogicalCPUs:
+                    description: |-
+                      CPUAMXMinLogicalCPUs is the logical-CPU count at or above which a non-GPU
+                      AMX node is cpu-amx without an AMXNodeSelector match. Zero or unset means
+                      DefaultCPUAMXMinLogicalCPUs (64).
+                    minimum: 0
+                    type: integer
+                  gpuOnlyNodeSelector:
+                    description: |-
+                      GPUOnlyNodeSelector forces matching GPU nodes into gpu-only even when they
+                      support AMX. nil leaves GPU+AMX nodes as mixed-cpu-amx-gpu.
+                    properties:
+                      matchExpressions:
+                        description: matchExpressions is a list of label selector
+                          requirements. The requirements are ANDed.
+                        items:
+                          description: |-
+                            A label selector requirement is a selector that contains values, a key, and an operator that
+                            relates the key and values.
+                          properties:
+                            key:
+                              description: key is the label key that the selector
+                                applies to.
+                              type: string
+                            operator:
+                              description: |-
+                                operator represents a key's relationship to a set of values.
+                                Valid operators are In, NotIn, Exists and DoesNotExist.
+                              type: string
+                            values:
+                              description: |-
+                                values is an array of string values. If the operator is In or NotIn,
+                                the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                the values array must be empty. This array is replaced during a strategic
+                                merge patch.
+                              items:
+                                type: string
+                              type: array
+                              x-kubernetes-list-type: atomic
+                          required:
+                          - key
+                          - operator
+                          type: object
+                        type: array
+                        x-kubernetes-list-type: atomic
+                      matchLabels:
+                        additionalProperties:
+                          type: string
+                        description: |-
+                          matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                          map is equivalent to an element of matchExpressions, whose key field is "key", the
+                          operator is "In", and the values array contains only "value". The requirements are ANDed.
+                        type: object
+                    type: object
+                    x-kubernetes-map-type: atomic
+                  overrideLabel:
+                    description: |-
+                      OverrideLabel is the node label that manually forces a node's class; its
+                      value must be a known class name. An AMX class requested on a node without
+                      AMX is rejected with a Warning event and the node keeps its automatic
+                      class. Empty means "cpu-pinning-operator.intel.com/node-class-override".
+                    type: string
+                type: object
+              excludeNodeSelector:
+                description: |-
+                  ExcludeNodeSelector marks nodes that are not pinning targets. The Node
+                  Reconciler does not provision a BalloonsPolicy for them or label them
+                  balloons-enabled, and prunes any existing CR and labels. A nil or empty
+                  selector excludes nothing.
+                properties:
+                  matchExpressions:
+                    description: matchExpressions is a list of label selector requirements.
+                      The requirements are ANDed.
+                    items:
+                      description: |-
+                        A label selector requirement is a selector that contains values, a key, and an operator that
+                        relates the key and values.
+                      properties:
+                        key:
+                          description: key is the label key that the selector applies
+                            to.
+                          type: string
+                        operator:
+                          description: |-
+                            operator represents a key's relationship to a set of values.
+                            Valid operators are In, NotIn, Exists and DoesNotExist.
+                          type: string
+                        values:
+                          description: |-
+                            values is an array of string values. If the operator is In or NotIn,
+                            the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                            the values array must be empty. This array is replaced during a strategic
+                            merge patch.
+                          items:
+                            type: string
+                          type: array
+                          x-kubernetes-list-type: atomic
+                      required:
+                      - key
+                      - operator
+                      type: object
+                    type: array
+                    x-kubernetes-list-type: atomic
+                  matchLabels:
+                    additionalProperties:
+                      type: string
+                    description: |-
+                      matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                      map is equivalent to an element of matchExpressions, whose key field is "key", the
+                      operator is "In", and the values array contains only "value". The requirements are ANDed.
+                    type: object
+                type: object
+                x-kubernetes-map-type: atomic
+              nodeConfigOverrides:
+                description: |-
+                  NodeConfigOverrides gives label-selected node sets a different balloon
+                  block than the cluster default, for mixed-CPU fleets. The list is ordered:
+                  the first override whose nodeSelector matches a node wins, and its set
+                  fields (cpuAllocation, reserved) are layered per-field onto spec.balloon.
+                  webhook.failurePolicy and excludeNodeSelector are cluster-global and
+                  cannot be overridden per node.
+
+                  Capped at 32 entries to bound the CEL validation cost of the reused
+                  BalloonSpec across the array.
+                items:
+                  description: |-
+                    NodeConfigOverride binds a label-selected node set to a balloon block that
+                    overrides the cluster default per-field (an unset field falls back to
+                    spec.balloon). Overrides are matched first-match-wins in list order, so an
+                    override must set at least one of cpuAllocation or reserved: an empty one
+                    would shadow later overrides while changing nothing.
+                  properties:
+                    balloon:
+                      description: |-
+                        Balloon holds the settings applied to matching nodes, layered per-field
+                        over spec.balloon: set cpuAllocation and/or reserved; unset fields are
+                        inherited. reserved supports the same cpus, percent and measured modes as
+                        the cluster default.
+                      properties:
+                        cpuAllocation:
+                          description: |-
+                            CPUAllocation selects the hyperthread handling mode:
+                              physical-cores (operator default) — hyperthread siblings are excluded
+                                from the pool (availableResources: exclude-cpuset); a request for N
+                                CPUs consumes N physical cores;
+                              hyperthreads — the full logical-CPU pool is used.
+                            Unset means inherit: the operator default at the cluster level, or the
+                            cluster default in a per-node override.
+                          enum:
+                          - physical-cores
+                          - hyperthreads
+                          type: string
+                        htSiblingPolicy:
+                          default: exclude
+                          description: |-
+                            HTSiblingPolicy selects what happens to the hyperthread siblings of pinned
+                            cores in physical-cores mode:
+                              exclude (default) — full isolation: siblings are removed from the
+                                allocatable pool (availableResources: exclude-cpuset), so no workload
+                                lands on the second thread of a pinned core;
+                              reserved — density mode: siblings are placed in the reserved pool's
+                                cpuset (reservedResources.cpu), so non-pinned work can use them while
+                                they stay out of the exclusive balloons. Recovers roughly half the
+                                cores exclude removes, at the cost of noisy-neighbor interference on
+                                the shared core. The reserved pool size is then the sibling count, so
+                                the reserved sizing spec is not applied.
+                            No effect in hyperthreads mode.
+                          enum:
+                          - exclude
+                          - reserved
+                          type: string
+                        packing:
+                          description: |-
+                            Packing selects how the webhook steers an unscheduled pod among the nodes
+                            that fit its request, when live headroom data is available:
+                              spread (default) — the node with the most free room. Smaller blast
+                                radius, but free room fragments over time so large spans stop fitting
+                                (see the cpu_pinning_cpu_fragmentation metric);
+                              binpack — the node left least fragmented after placement, filling
+                                partly-used nodes first. Keeps large-span capacity contiguous at the
+                                cost of a larger blast radius.
+                            Never changes a pod's request or its reserved per-NUMA share. Cluster-global:
+                            honored only on spec.balloon, not in a per-node override. Unset means spread.
+                          enum:
+                          - spread
+                          - binpack
+                          type: string
+                        reserved:
+                          description: |-
+                            Reserved sizes the reserved CPU pool (system / non-model components). If
+                            omitted, defaults to 12 logical CPUs. See ReservedSizingSpec. Ignored in
+                            density mode (htSiblingPolicy=reserved), where the reserved pool is the
+                            HT-sibling set.
+                          properties:
+                            cpus:
+                              description: Cpus is an explicit logical-CPU count for
+                                the reserved pool.
+                              minimum: 0
+                              type: integer
+                            measured:
+                              description: |-
+                                Measured sizes the reserved pool per node from observed demand (the sum
+                                of CPU requests of the node's non-pinned pods) plus headroom, returning
+                                unused reserved cores to the pinning pool. See MeasuredSizingSpec.
+                              properties:
+                                headroomPercent:
+                                  default: 50
+                                  description: |-
+                                    HeadroomPercent is the slack added above measured usage, as a percentage.
+                                    50 (default) reserves 1.5× observed demand. 0 tracks usage exactly (no
+                                    slack); larger values absorb bursts at the cost of pinning capacity.
+                                  maximum: 1000
+                                  minimum: 0
+                                  type: integer
+                                min:
+                                  default: 4
+                                  description: |-
+                                    Min is the floor for the measured result, in logical CPUs, and the
+                                    cold-start size before any usage is observed. Defaults to 4.
+                                  minimum: 0
+                                  type: integer
+                              type: object
+                            percent:
+                              description: |-
+                                Percent is a per-node percentage of physical cores allocated to the
+                                reserved pool.
+                              maximum: 100
+                              minimum: 0
+                              type: integer
+                          type: object
+                        reservedNamespaces:
+                          description: |-
+                            ReservedNamespaces lists namespace globs whose unpinned pods are routed to
+                            the exclusive reserved CPU pool, emitted verbatim as the BalloonsPolicy's
+                            reservedPoolNamespaces. The NRI plugin always routes "kube-system" to
+                            reserved, and puts any other unmatched pod on its shared "default"
+                            balloon, so scoping this list never strands a pod.
+
+                              - Unset (nil) — ["*", "kube-system"]: every unpinned pod goes to
+                                reserved. Right for a dedicated inference node.
+                              - Explicit list (e.g. ["inference"]) — only those namespaces go to
+                                reserved; other unpinned pods land on the shared default balloon.
+                              - Explicit empty list ([]) — nothing beyond kube-system goes to reserved.
+
+                            On a shared/OpenShift node "*" funnels every platform pod into the
+                            reserved pool and can exhaust it so pinned pods get no balloon; scope or
+                            empty this list there. Cluster-global: honored only on spec.balloon, not in
+                            a per-node override.
+                          items:
+                            type: string
+                          type: array
+                          x-kubernetes-list-type: atomic
+                      type: object
+                      x-kubernetes-validations:
+                      - message: at most one of reserved.cpus, reserved.percent, reserved.measured
+                          may be set
+                        rule: '!has(self.reserved) || ((has(self.reserved.cpus)?1:0)
+                          + (has(self.reserved.percent)?1:0) + (has(self.reserved.measured)?1:0))
+                          <= 1'
+                    nodeSelector:
+                      description: |-
+                        NodeSelector selects the nodes this override applies to. Required and
+                        non-empty: an empty selector would match every node and is rejected.
+                      properties:
+                        matchExpressions:
+                          description: matchExpressions is a list of label selector
+                            requirements. The requirements are ANDed.
+                          items:
+                            description: |-
+                              A label selector requirement is a selector that contains values, a key, and an operator that
+                              relates the key and values.
+                            properties:
+                              key:
+                                description: key is the label key that the selector
+                                  applies to.
+                                type: string
+                              operator:
+                                description: |-
+                                  operator represents a key's relationship to a set of values.
+                                  Valid operators are In, NotIn, Exists and DoesNotExist.
+                                type: string
+                              values:
+                                description: |-
+                                  values is an array of string values. If the operator is In or NotIn,
+                                  the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                  the values array must be empty. This array is replaced during a strategic
+                                  merge patch.
+                                items:
+                                  type: string
+                                type: array
+                                x-kubernetes-list-type: atomic
+                            required:
+                            - key
+                            - operator
+                            type: object
+                          type: array
+                          x-kubernetes-list-type: atomic
+                        matchLabels:
+                          additionalProperties:
+                            type: string
+                          description: |-
+                            matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                            map is equivalent to an element of matchExpressions, whose key field is "key", the
+                            operator is "In", and the values array contains only "value". The requirements are ANDed.
+                          type: object
+                      type: object
+                      x-kubernetes-map-type: atomic
+                  required:
+                  - nodeSelector
+                  type: object
+                  x-kubernetes-validations:
+                  - message: nodeConfigOverrides[].nodeSelector must be non-empty
+                      (set a non-empty matchLabels or matchExpressions); an empty
+                      selector matches every node and would shadow the cluster default
+                      and all later overrides
+                    rule: has(self.nodeSelector) && ((has(self.nodeSelector.matchLabels)
+                      && size(self.nodeSelector.matchLabels) > 0) || (has(self.nodeSelector.matchExpressions)
+                      && size(self.nodeSelector.matchExpressions) > 0))
+                  - message: nodeConfigOverrides[].balloon must override at least
+                      one of cpuAllocation or reserved; an override that changes nothing
+                      is not allowed
+                    rule: has(self.balloon) && (has(self.balloon.cpuAllocation) ||
+                      has(self.balloon.reserved))
+                maxItems: 32
+                type: array
+                x-kubernetes-list-type: atomic
+              webhook:
+                description: Webhook holds the MutatingWebhookConfiguration settings
+                  (failurePolicy).
+                properties:
+                  failurePolicy:
+                    default: Ignore
+                    description: FailurePolicy controls whether admission fails open
+                      or closed when the webhook is unreachable.
+                    enum:
+                    - Ignore
+                    - Fail
+                    type: string
+                type: object
+            type: object
+          status:
+            description: |-
+              BalloonsClusterConfigStatus reports the cluster-wide pinning pool: the
+              balloons-enabled nodes the operator has provisioned.
+            properties:
+              conditions:
+                description: |-
+                  Conditions follows the standard Kubernetes conditions convention
+                  (e.g. Ready) for the pinning pool.
+                items:
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
+              observedGeneration:
+                description: ObservedGeneration is the .metadata.generation last reconciled.
+                format: int64
+                type: integer
+              perNode:
+                description: PerNode reports provisioning per balloons-enabled node.
+                items:
+                  description: NodeStatus reports what the operator provisioned on
+                    one node.
+                  properties:
+                    cpuAllocation:
+                      description: |-
+                        CPUAllocation is the hyperthread-handling mode resolved for the node
+                        ("physical-cores" | "hyperthreads"), reflecting any matching per-node
+                        override. Empty while the node has published no mode.
+                      type: string
+                    features:
+                      additionalProperties:
+                        type: string
+                      description: |-
+                        Features is a copy of the node-feature labels the operator publishes on
+                        this node (e.g. "cpu-pinning-operator.intel.com/amx": "true"). Used by
+                        the scheduling nodeFeatures map to steer matched pods.
+                      type: object
+                    maxSpan:
+                      description: MaxSpan is the largest span the node supports (rounded
+                        to {1,2,4,8}).
+                      type: integer
+                    name:
+                      description: Name is the node name.
+                      type: string
+                    numaNodes:
+                      description: NumaNodes is the node's NUMA node count.
+                      type: integer
+                    physicalCPUs:
+                      description: PhysicalCPUs is the node's physical core count.
+                      type: integer
+                    reservedCPUs:
+                      description: |-
+                        ReservedCPUs is the reserved-pool size applied on the node, after any
+                        per-node override and the per-node clamps.
+                      type: integer
+                  required:
+                  - maxSpan
+                  - name
+                  - numaNodes
+                  - physicalCPUs
+                  - reservedCPUs
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - name
+                x-kubernetes-list-type: map
+              provisionedNodes:
+                description: ProvisionedNodes counts balloons-enabled nodes in the
+                  pinning pool.
+                type: integer
+            type: object
+        type: object
+        x-kubernetes-validations:
+        - message: BalloonsClusterConfig is a singleton and must be named 'cluster'
+          rule: self.metadata.name == 'cluster'
+    served: true
+    storage: true
+    subresources:
+      status: {}

@@ -1,0 +1,23 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+{{- if and .Values.podDisruptionBudget.enabled (gt (int .Values.replicaCount) 1) }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "cpu-pinning-operator.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "cpu-pinning-operator.labels" . | nindent 4 }}
+spec:
+  # Keep at least one manager pod running through voluntary disruptions (node
+  # drain, cluster upgrade) so the mutating webhook never goes fully down and
+  # matched pod creation doesn't stall. Selects the manager via the same
+  # selectorLabels helper the Deployment uses. The PDB is only rendered when
+  # replicaCount > 1: at a single replica a minAvailable:1 PDB permits zero
+  # voluntary evictions and would block node drains, so it is gated off.
+  minAvailable: {{ .Values.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      {{- include "cpu-pinning-operator.selectorLabels" . | nindent 6 }}
+{{- end }}

@@ -1,0 +1,581 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "title": "cpu-pinning-operator chart values",
+  "description": "Validates the values Helm coalesces for this chart on template, install and upgrade. It constrains the settings where a wrong value renders successfully today and produces a broken or subtly different install: enums, the booleans that gate whole templates, integers with real bounds, and the image reference. Free-form blocks (resources, securityContext, label selectors, subchart values) and unknown keys are deliberately left open.",
+  "type": "object",
+  "properties": {
+    "replicaCount": {
+      "description": "Manager replicas. Every replica serves the admission webhook. Zero parks the manager and leaves admission to the mutating webhook's failurePolicy.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "podDisruptionBudget": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "minAvailable": {
+          "description": "Pods that must stay available during a voluntary disruption, as a count or a percentage string.",
+          "type": ["integer", "string"],
+          "minimum": 0
+        }
+      }
+    },
+    "image": {
+      "type": "object",
+      "properties": {
+        "repository": {
+          "description": "Operator image repository. An empty repository renders a reference no registry can resolve.",
+          "type": "string",
+          "minLength": 1
+        },
+        "pullPolicy": {
+          "type": "string",
+          "enum": ["Always", "IfNotPresent", "Never"]
+        },
+        "tag": {
+          "description": "Empty follows the chart appVersion. A string, so an unquoted numeric tag is rejected rather than read as a number — YAML turns 1.10 into 1.1 and the reference then names a different image.",
+          "type": "string"
+        },
+        "digest": {
+          "description": "Empty, or a digest carrying its algorithm prefix. The algorithm prefix is checked while rendering, so the error names the bad value.",
+          "type": "string"
+        }
+      }
+    },
+    "imagePullSecrets": {
+      "type": "array",
+      "items": { "type": "object" }
+    },
+    "nameOverride": { "type": "string" },
+    "fullnameOverride": { "type": "string" },
+    "namespace": {
+      "type": "object",
+      "properties": {
+        "create": { "type": "boolean" },
+        "name": { "type": "string" }
+      }
+    },
+    "podSecurityStandards": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "level": {
+          "description": "Pod Security Standards level applied as namespace labels.",
+          "type": "string",
+          "enum": ["privileged", "baseline", "restricted"]
+        }
+      }
+    },
+    "networkPolicy": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "webhook": {
+          "type": "object",
+          "properties": {
+            "from": {
+              "description": "NetworkPolicy `from` peers allowed to reach the webhook port, normally ipBlocks of the control-plane addresses. Empty allows any source.",
+              "type": "array",
+              "items": { "type": "object" }
+            }
+          }
+        },
+        "metrics": {
+          "type": "object",
+          "properties": {
+            "from": {
+              "description": "NetworkPolicy `from` peers allowed to scrape the metrics port. Empty allows any source.",
+              "type": "array",
+              "items": { "type": "object" }
+            }
+          }
+        },
+        "egress": {
+          "type": "object",
+          "properties": {
+            "apiServerPorts": {
+              "type": "array",
+              "items": { "type": "integer", "minimum": 1, "maximum": 65535 }
+            },
+            "dns": { "type": "boolean" }
+          }
+        }
+      }
+    },
+    "openShift": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "probeSCCName": { "type": "string" },
+        "probeServiceAccountName": { "type": "string" }
+      }
+    },
+    "serviceAccount": {
+      "type": "object",
+      "properties": {
+        "create": { "type": "boolean" },
+        "annotations": { "type": "object" },
+        "name": { "type": "string" }
+      }
+    },
+    "rbac": {
+      "type": "object",
+      "properties": {
+        "create": { "type": "boolean" }
+      }
+    },
+    "preDeleteHook": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" }
+      }
+    },
+    "podAnnotations": { "type": "object" },
+    "podSecurityContext": { "type": "object" },
+    "securityContext": { "type": "object" },
+    "resources": { "type": "object" },
+    "nodeSelector": { "type": "object" },
+    "tolerations": {
+      "type": "array",
+      "items": { "type": "object" }
+    },
+    "affinity": {
+      "description": "Empty applies the chart's soft HA default; a value replaces it wholesale.",
+      "type": "object"
+    },
+    "leaderElection": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" }
+      }
+    },
+    "driftEviction": {
+      "type": "object",
+      "properties": {
+        "interval": {
+          "description": "Go duration, e.g. \"10s\". Empty uses the manager default.",
+          "type": "string"
+        },
+        "burst": {
+          "description": "Token-bucket burst size. 0 uses the manager default.",
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "metrics": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
+        "secure": { "type": "boolean" },
+        "requireAuth": { "type": "boolean" },
+        "readers": {
+          "description": "ServiceAccounts bound to the metrics-reader ClusterRole (get on /metrics). Both fields are required on every entry: a binding subject missing either would silently grant nothing.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "namespace"],
+            "properties": {
+              "name": { "type": "string", "minLength": 1 },
+              "namespace": { "type": "string", "minLength": 1 }
+            }
+          }
+        },
+        "serviceMonitor": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "description": "Null (unset) follows the cluster capability; true or false decides it. A string spelling either boolean is read as that boolean, and an empty string is read as unset.",
+              "type": ["boolean", "string", "null"],
+              "pattern": "^([Tt][Rr][Uu][Ee]|[Ff][Aa][Ll][Ss][Ee])?$"
+            },
+            "interval": { "type": "string" },
+            "labels": { "type": "object" },
+            "allowExternalServingCert": { "type": "boolean" }
+          }
+        },
+        "prometheusRule": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "description": "Null (unset) follows the cluster capability; true or false decides it. A string spelling either boolean is read as that boolean, and an empty string is read as unset.",
+              "type": ["boolean", "string", "null"],
+              "pattern": "^([Tt][Rr][Uu][Ee]|[Ff][Aa][Ll][Ss][Ee])?$"
+            },
+            "labels": { "type": "object" },
+            "alerts": { "type": "boolean" }
+          }
+        }
+      }
+    },
+    "grafanaDashboard": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "namespace": { "type": "string" },
+        "sidecarLabel": { "type": "string", "minLength": 1 },
+        "sidecarLabelValue": {
+          "description": "Label value the Grafana sidecar selects on. Quoted into the label, so a bare number works too.",
+          "type": ["string", "integer", "boolean"]
+        },
+        "datasourceUid": { "type": "string" },
+        "lokiLogs": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean" }
+          }
+        },
+        "lokiDatasourceUid": { "type": "string" },
+        "lokiLabels": {
+          "type": "object",
+          "properties": {
+            "namespace": { "type": "string", "minLength": 1 },
+            "workload": { "type": "string", "minLength": 1 },
+            "node": { "type": "string", "minLength": 1 },
+            "pluginWorkload": { "type": "string", "minLength": 1 }
+          }
+        },
+        "lokiPluginName": { "type": "string", "minLength": 1 },
+        "folderAnnotation": {
+          "description": "Empty skips the sidecar folder annotation.",
+          "type": "string"
+        },
+        "folder": { "type": "string" },
+        "fleetOverview": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean" }
+          }
+        }
+      }
+    },
+    "healthProbe": {
+      "type": "object",
+      "properties": {
+        "port": { "type": "integer", "minimum": 1, "maximum": 65535 }
+      }
+    },
+    "balloonsReady": {
+      "type": "object",
+      "properties": {
+        "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
+        "secure": { "type": "boolean" },
+        "allowExternalServingCert": { "type": "boolean" }
+      }
+    },
+    "webhook": {
+      "type": "object",
+      "properties": {
+        "caBundle": {
+          "description": "Base64 PEM CA that signed the serving cert, for certManager.enabled=false. Ignored with cert-manager.",
+          "type": "string"
+        },
+        "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
+        "certDir": { "type": "string", "minLength": 1 },
+        "reservationTTL": {
+          "description": "Go duration, e.g. \"90s\". Empty uses the manager default.",
+          "type": "string"
+        },
+        "reserveAuthority": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
+            "allowExternalServingCert": { "type": "boolean" }
+          }
+        },
+        "service": {
+          "type": "object",
+          "properties": {
+            "name": { "type": "string", "minLength": 1 },
+            "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
+            "sessionAffinity": {
+              "description": "Empty leaves the field unset. A value is checked while rendering, so the error names the setting and the bad value.",
+              "type": "string"
+            }
+          }
+        },
+        "mutatingWebhookConfiguration": {
+          "type": "object",
+          "properties": {
+            "name": { "type": "string", "minLength": 1 },
+            "failurePolicy": {
+              "type": "string",
+              "enum": ["Ignore", "Fail"]
+            },
+            "timeoutSeconds": { "type": "integer", "minimum": 1, "maximum": 30 }
+          }
+        },
+        "validatingWebhookConfiguration": {
+          "type": "object",
+          "properties": {
+            "name": { "type": "string", "minLength": 1 },
+            "failurePolicy": {
+              "type": "string",
+              "enum": ["Ignore", "Fail"]
+            },
+            "timeoutSeconds": { "type": "integer", "minimum": 1, "maximum": 30 }
+          }
+        },
+        "targetNamespaces": {
+          "description": "Exact namespace names. An empty list matches no namespace.",
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "namespaceSelector": { "type": "object" }
+      }
+    },
+    "initContainer": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "image": {
+          "description": "Empty takes the operator image, digest included.",
+          "type": "string"
+        },
+        "pullPolicy": {
+          "type": "string",
+          "enum": ["Always", "IfNotPresent", "Never"]
+        },
+        "balloons": {
+          "type": "object",
+          "properties": {
+            "namespace": {
+              "description": "Empty resolves to the release namespace when the balloons subchart is enabled, and to kube-system when it is not.",
+              "type": "string"
+            },
+            "daemonsetName": { "type": "string", "minLength": 1 },
+            "waitTimeout": {
+              "description": "Poll budget, as a bare number of seconds or a Go duration such as \"5m\". Zero uses the built-in budget.",
+              "type": ["integer", "string"],
+              "minimum": 0
+            }
+          }
+        }
+      }
+    },
+    "probe": {
+      "type": "object",
+      "properties": {
+        "image": {
+          "description": "Empty uses the operator image, digest included.",
+          "type": "string"
+        },
+        "resources": { "type": "object" },
+        "tolerations": {
+          "type": "array",
+          "items": { "type": "object" }
+        }
+      }
+    },
+    "certManager": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "issuer": {
+          "type": "object",
+          "properties": {
+            "name": { "type": "string", "minLength": 1 }
+          }
+        },
+        "ca": {
+          "type": "object",
+          "properties": {
+            "duration": {
+              "description": "Go duration for the CA signing the serving cert, e.g. \"8760h\".",
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "certificate": {
+          "type": "object",
+          "properties": {
+            "name": { "type": "string", "minLength": 1 },
+            "secretName": { "type": "string", "minLength": 1 },
+            "privateKey": {
+              "type": "object",
+              "properties": {
+                "algorithm": {
+                  "type": "string",
+                  "enum": ["ECDSA", "RSA", "Ed25519"]
+                },
+                "size": {
+                  "description": "Key size in bits, interpreted per algorithm (ECDSA 256/384/521, RSA 2048 and above).",
+                  "type": "integer",
+                  "minimum": 256,
+                  "maximum": 8192
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "cert-manager": {
+      "description": "Values of the bundled cert-manager subchart, validated by that chart.",
+      "type": "object"
+    },
+    "nri-resource-policy-balloons": {
+      "description": "Values of the NRI balloons subchart, validated by that chart.",
+      "type": "object"
+    },
+    "balloonsClusterConfig": {
+      "type": "object",
+      "properties": {
+        "create": { "type": "boolean" },
+        "balloon": {
+          "type": "object",
+          "properties": {
+            "cpuAllocation": {
+              "type": "string",
+              "enum": ["physical-cores", "hyperthreads"]
+            },
+            "htSiblingPolicy": {
+              "type": "string",
+              "enum": ["exclude", "reserved"]
+            },
+            "packing": {
+              "type": "string",
+              "enum": ["spread", "binpack"]
+            },
+            "reserved": {
+              "description": "At most one of cpus, percent and measured may be set.",
+              "type": "object",
+              "properties": {
+                "cpus": { "type": "integer", "minimum": 0 },
+                "percent": { "type": "integer", "minimum": 0, "maximum": 100 },
+                "measured": {
+                  "type": "object",
+                  "properties": {
+                    "headroomPercent": { "type": "integer", "minimum": 0, "maximum": 1000 },
+                    "min": { "type": "integer", "minimum": 0 }
+                  }
+                }
+              }
+            },
+            "reservedNamespaces": {
+              "type": "array",
+              "items": { "type": "string", "minLength": 1 }
+            }
+          }
+        },
+        "webhook": {
+          "type": "object",
+          "properties": {
+            "failurePolicy": {
+              "type": "string",
+              "enum": ["Ignore", "Fail"]
+            }
+          }
+        },
+        "classification": {
+          "type": "object",
+          "properties": {
+            "cpuAMXMinLogicalCPUs": { "type": "integer", "minimum": 0 },
+            "amxNodeSelector": { "type": "object" },
+            "gpuOnlyNodeSelector": { "type": "object" },
+            "overrideLabel": { "type": "string", "minLength": 1 }
+          }
+        },
+        "classProfiles": { "type": "object" },
+        "nodeConfigOverrides": {
+          "type": "array",
+          "items": { "type": "object" }
+        },
+        "excludeNodeSelector": { "type": "object" }
+      }
+    },
+    "balloonPinningPolicy": {
+      "type": "object",
+      "properties": {
+        "create": { "type": "boolean" },
+        "name": { "type": "string", "minLength": 1 },
+        "match": {
+          "type": "object",
+          "properties": {
+            "byContainerName": {
+              "type": "array",
+              "items": { "type": "string", "minLength": 1 }
+            },
+            "byPodLabels": { "type": "object" },
+            "containerSelection": {
+              "type": "string",
+              "enum": ["wholePod", "largestContainer"]
+            }
+          }
+        },
+        "namespaces": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "namespaceSelector": { "type": "object" },
+        "intent": {
+          "type": "object",
+          "properties": {
+            "span": { "$ref": "#/definitions/intentSource" },
+            "multiplier": { "$ref": "#/definitions/intentSource" },
+            "coLocate": {
+              "description": "Empty leaves placement to the headroom engine.",
+              "type": "string",
+              "enum": ["", "package", "numa"]
+            }
+          }
+        },
+        "capacityCheck": {
+          "type": "object",
+          "properties": {
+            "mode": {
+              "type": "string",
+              "enum": ["enforce", "warn", "off"]
+            }
+          }
+        },
+        "scheduling": {
+          "type": "object",
+          "properties": {
+            "enforcePinning": { "type": "boolean" },
+            "nodeFeatures": {
+              "description": "Node label to affinity mode.",
+              "type": "object",
+              "additionalProperties": {
+                "type": "string",
+                "enum": ["prefer", "require", "ignore"]
+              }
+            }
+          }
+        },
+        "driftPolicy": {
+          "type": "string",
+          "enum": ["eventsOnly", "restart"]
+        },
+        "guardActivePods": { "type": "boolean" }
+      }
+    },
+    "log": {
+      "type": "object",
+      "properties": {
+        "level": {
+          "description": "Manager log verbosity: debug, info, error or panic in any case, or a positive integer for finer debug levels. The pattern applies to the string form, the minimum to the integer form.",
+          "type": ["string", "integer"],
+          "pattern": "^([Dd][Ee][Bb][Uu][Gg]|[Ii][Nn][Ff][Oo]|[Ee][Rr][Rr][Oo][Rr]|[Pp][Aa][Nn][Ii][Cc]|[1-9][0-9]*)$",
+          "minimum": 1
+        },
+        "development": { "type": "boolean" }
+      }
+    }
+  },
+  "definitions": {
+    "intentSource": {
+      "description": "Where the webhook reads one intent value off a matched pod. Sources are tried in order: annotation, argRegex, envVar, default.",
+      "type": "object",
+      "properties": {
+        "annotation": { "type": "string" },
+        "argRegex": { "type": "string" },
+        "envVar": { "type": "string" },
+        "default": { "type": "integer", "minimum": 1 }
+      }
+    }
+  }
+}

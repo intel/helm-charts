@@ -1,0 +1,18 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+{{- if .Values.namespace.create }}
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ default .Release.Namespace .Values.namespace.name }}
+  labels:
+    {{- include "cpu-pinning-operator.labels" . | nindent 4 }}
+    {{- if .Values.podSecurityStandards.enabled }}
+    # The operator's own workloads meet "restricted"; the bundled balloons plugin
+    # (hostPath volumes) does not, so see podSecurityStandards in values.yaml.
+    pod-security.kubernetes.io/enforce: {{ .Values.podSecurityStandards.level | quote }}
+    pod-security.kubernetes.io/audit: {{ .Values.podSecurityStandards.level | quote }}
+    pod-security.kubernetes.io/warn: {{ .Values.podSecurityStandards.level | quote }}
+    {{- end }}
+{{- end }}

@@ -1,0 +1,40 @@
+{{- /*
+Copyright (C) 2026 Intel Corporation
+SPDX-License-Identifier: Apache-2.0
+*/ -}}
+CPU Pinning Operator {{ .Chart.AppVersion }} {{ if .Release.IsUpgrade }}upgraded{{ else }}installed{{ end }} as release "{{ .Release.Name }}" in namespace "{{ .Release.Namespace }}".
+{{- if .Release.IsUpgrade }}
+
+  ⚠️  Helm does not update CRDs on upgrade — crds/ is install-only. Apply them BEFORE
+      each helm upgrade. Check now that they match this chart (an empty diff passes):
+        kubectl diff -f deploy/cpu-pinning-operator/crds/
+      If it differs: kubectl apply -f deploy/cpu-pinning-operator/crds/, then re-run helm upgrade.
+      Node labels and rendered NRI policies also outlive a helm rollback. See docs/upgrade.md.
+{{- end }}
+
+The manager serves an admission webhook, so it runs {{ .Values.replicaCount }} replica(s) for HA.
+Leader election keeps one replica active; the others are hot standbys that also serve the webhook.
+
+High availability guidance:
+  * Set replicaCount to min(nodes, 3). More replicas than nodes buys no extra
+    availability and just costs their resources.
+  * Replicas are spread across nodes and prefer control-plane nodes via a SOFT
+    default affinity (override .Values.affinity to replace it).
+  * The manager does NOT self-scale. Have your deploy tooling pass
+    --set replicaCount=<min(nodes,3)> if you want it to track the node count.
+{{- if le (int .Values.replicaCount) 1 }}
+
+  NOTE: replicaCount is {{ .Values.replicaCount }} — no PodDisruptionBudget is rendered (a
+  minAvailable:1 PDB on a single replica would block node drains). Raise
+  replicaCount for HA once you have more than one schedulable node.
+{{- end }}
+
+{{- if not .Values.networkPolicy.enabled }}
+
+  ⚠️  networkPolicy.enabled is false — the chart will not install its default-deny
+  NetworkPolicy. If no other policy protects the operator's ports, set
+  networkPolicy.enabled=true or apply an equivalent policy separately.
+{{- end }}
+
+Verify the manager is running:
+  kubectl get pods -n {{ .Release.Namespace }} -l app.kubernetes.io/name={{ include "cpu-pinning-operator.name" . }}

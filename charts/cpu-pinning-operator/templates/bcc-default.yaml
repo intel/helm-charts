@@ -1,0 +1,38 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+{{- if .Values.balloonsClusterConfig.create }}
+apiVersion: cpu-pinning-operator.intel.com/v1alpha1
+kind: BalloonsClusterConfig
+metadata:
+  # Must be "cluster": the CRD's CEL validation rejects any other name so the
+  # config stays a true singleton.
+  name: cluster
+  labels:
+    {{- include "cpu-pinning-operator.labels" . | nindent 4 }}
+spec:
+  {{- with .Values.balloonsClusterConfig.balloon }}
+  balloon:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with .Values.balloonsClusterConfig.classification }}
+  classification:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with .Values.balloonsClusterConfig.classProfiles }}
+  classProfiles:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with .Values.balloonsClusterConfig.nodeConfigOverrides }}
+  nodeConfigOverrides:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with .Values.balloonsClusterConfig.webhook }}
+  webhook:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with .Values.balloonsClusterConfig.excludeNodeSelector }}
+  excludeNodeSelector:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+{{- end }}

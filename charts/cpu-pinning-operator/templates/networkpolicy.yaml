@@ -1,0 +1,120 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+{{- if .Values.networkPolicy.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "cpu-pinning-operator.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "cpu-pinning-operator.labels" . | nindent 4 }}
+spec:
+  # Targets the manager pod only; other workloads in the namespace are
+  # unaffected. Selecting a pod with both Ingress and Egress policy types makes
+  # this a default-deny for that pod — every flow not explicitly allowed below
+  # is dropped.
+  podSelector:
+    matchLabels:
+      {{- include "cpu-pinning-operator.selectorLabels" . | nindent 6 }}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Webhook: the API server invokes the mutating webhook. It connects from
+    # host-networked control-plane IPs that a pod/namespace selector cannot
+    # match, so only an ipBlock can name it and the default is any source.
+    # Restricted to the peers in networkPolicy.webhook.from (empty list = any
+    # source) — see docs/secure-configuration.md for finding the CIDRs.
+    - ports:
+        - port: webhook-server
+          protocol: TCP
+      {{- with .Values.networkPolicy.webhook.from }}
+      from:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    {{- if .Values.metrics.enabled }}
+    # Metrics: Prometheus scrapes the metrics port. Restricted to the peers in
+    # networkPolicy.metrics.from (empty list = any source).
+    - ports:
+        - port: metrics
+          protocol: TCP
+      {{- with .Values.networkPolicy.metrics.from }}
+      from:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    {{- end }}
+    # Health probes: the kubelet runs liveness/readiness checks from the node
+    # IP (not label-selectable), so the health-probe port is reachable from any
+    # source. Without this the pod would be killed under a default-deny policy.
+    - ports:
+        - port: {{ .Values.healthProbe.port }}
+          protocol: TCP
+    # Per-node balloons-readiness endpoint: the injected wait-for-balloons init
+    # container (in the target workload namespaces) polls this port. Those init
+    # pods are not label-selectable from here, so the port is reachable from any
+    # source. It exposes only a per-node boolean.
+    - ports:
+        - port: balloons-ready
+          protocol: TCP
+    {{- if include "cpu-pinning-operator.reserveAuthorityEnabled" . }}
+    # Internal leader-authoritative reserve endpoint: a follower replica forwards
+    # its reserve step to the leader here. Both ends are operator replicas, so
+    # restrict ingress to peers carrying the manager's own selector labels. The
+    # uninstall hook Jobs carry those same labels, so they are admitted too; mTLS
+    # is what actually authenticates the peer, and they present no client cert.
+    - ports:
+        - port: reserve
+          protocol: TCP
+      from:
+        - podSelector:
+            matchLabels:
+              {{- include "cpu-pinning-operator.selectorLabels" . | nindent 14 }}
+    {{- end }}
+  {{- $apiServerPorts := compact .Values.networkPolicy.egress.apiServerPorts }}
+  {{- $reserveEgress := include "cpu-pinning-operator.reserveAuthorityEnabled" . }}
+  # At least one egress rule always exists (pre-flight readiness loopback).
+  egress:
+    # Pre-flight readiness check: the webhook queries its own balloons-readiness
+    # endpoint via the Service. Requires DNS egress for name resolution; with
+    # dns=false the lookup fails open (inconclusive, init container injected).
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "cpu-pinning-operator.selectorLabels" . | nindent 14 }}
+      ports:
+        - port: balloons-ready
+          protocol: TCP
+    {{- if $reserveEgress }}
+    # Internal leader-authoritative reserve: a follower dials the leader replica's
+    # reserve port. The peer is another operator replica (selectable by the
+    # manager's own labels); the follower dials it by pod IP resolved from the
+    # lease, so no fixed destination can be pinned beyond the pod selector.
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "cpu-pinning-operator.selectorLabels" . | nindent 14 }}
+      ports:
+        - port: reserve
+          protocol: TCP
+    {{- end }}
+    {{- with $apiServerPorts }}
+    # Kubernetes API server: watches, leader election, and status/CR writes.
+    # The API endpoint is a ClusterIP or set of node IPs that vary per cluster,
+    # so egress is allowed to any destination on the API ports. An empty list
+    # renders no API-server egress rule (same guard style as DNS below).
+    - ports:
+        {{- range . }}
+        - port: {{ . }}
+          protocol: TCP
+        {{- end }}
+    {{- end }}
+    {{- if .Values.networkPolicy.egress.dns }}
+    # Cluster DNS resolution.
+    - ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+    {{- end }}
+{{- end }}

@@ -1,0 +1,93 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+# Operator configuration, consumed by the manager container via envFrom. Only
+# static (value-only) settings live here; POD_NAMESPACE stays on the Deployment
+# because it is sourced from a fieldRef, which a ConfigMap cannot express. A
+# checksum annotation on the Deployment pod template rolls the manager whenever
+# these values change.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "cpu-pinning-operator.fullname" . }}-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "cpu-pinning-operator.labels" . | nindent 4 }}
+data:
+  WEBHOOK_CONFIG_NAME: {{ include "cpu-pinning-operator.fullname" . }}-{{ .Values.webhook.mutatingWebhookConfiguration.name }}
+  INIT_CONTAINER_NAME: {{ .Values.initContainer.name | quote }}
+  # The wait-for-balloons init container runs the operator's OWN image with the
+  # wait-for-balloons subcommand (no kubectl, no separate image); it defaults to
+  # the manager image and is overridable here.
+  INIT_CONTAINER_IMAGE: {{ .Values.initContainer.image | default (include "cpu-pinning-operator.image" .) | quote }}
+  INIT_CONTAINER_PULL_POLICY: {{ .Values.initContainer.pullPolicy | quote }}
+  # BALLOONS_NAMESPACE / BALLOONS_DAEMONSET name the NRI balloons plugin the
+  # per-node readiness endpoint reads to report whether the plugin pod on a node
+  # is Ready. WAIT_TIMEOUT (seconds) is the init container's overall poll budget.
+  #
+  # Namespace resolution: an explicit initContainer.balloons.namespace always
+  # wins. When left empty (the default), auto-detect where the balloons DaemonSet
+  # actually runs: if this chart SELF-INSTALLS the nri-resource-policy-balloons
+  # subchart, Helm places that DaemonSet in the release namespace, so track it;
+  # otherwise (balloons runs independently, e.g. pre-installed cluster-wide) fall
+  # back to kube-system. This keeps the readiness check pointed at the real
+  # DaemonSet on a fresh self-install (OpenShift and any clean cluster) without a
+  # manual override, while leaving external-balloons deployments unaffected.
+  BALLOONS_NAMESPACE: {{ include "cpu-pinning-operator.balloonsNamespace" . | quote }}
+  BALLOONS_DAEMONSET: {{ .Values.initContainer.balloons.daemonsetName | quote }}
+  WAIT_TIMEOUT: {{ .Values.initContainer.balloons.waitTimeout | quote }}
+  # Manager Service DNS + readiness port the injected init container polls
+  # (GET /balloons/ready?node=<nodeName>). The webhook stamps this into the
+  # injected container's args. When https, the operator copies ca.crt into
+  # READINESS_CA_CONFIGMAP in each targeted namespace and the container mounts it.
+  {{- if include "cpu-pinning-operator.balloonsReadySecure" . }}
+  BALLOONS_READY_ENDPOINT: {{ printf "https://%s-balloons-ready.%s.svc:%d" (include "cpu-pinning-operator.fullname" .) .Release.Namespace (int .Values.balloonsReady.port) | quote }}
+  READINESS_CA_CONFIGMAP: {{ include "cpu-pinning-operator.fullname" . }}-readiness-ca
+  {{- else }}
+  BALLOONS_READY_ENDPOINT: {{ printf "http://%s-balloons-ready.%s.svc:%d" (include "cpu-pinning-operator.fullname" .) .Release.Namespace (int .Values.balloonsReady.port) | quote }}
+  {{- end }}
+  # Topology-probe pod the Node reconciler launches per node. It runs the operator's
+  # OWN image with the topology-probe subcommand (no shell, no second image), so an
+  # air-gapped install mirrors only that one image. PROBE_RESOURCES is a JSON-encoded
+  # corev1.ResourceRequirements and PROBE_TOLERATIONS a JSON-encoded
+  # []corev1.Toleration so the probe schedules on tainted nodes
+  # (empty/unset → tolerate all).
+  PROBE_IMAGE: {{ .Values.probe.image | default (include "cpu-pinning-operator.image" .) | quote }}
+  {{- with .Values.probe.resources }}
+  PROBE_RESOURCES: {{ toJson . | quote }}
+  {{- end }}
+  {{- with .Values.imagePullSecrets }}
+  # The probe pod pulls the operator image, so it needs the same credentials the
+  # manager Deployment pulls with. JSON-encoded []corev1.LocalObjectReference.
+  PROBE_IMAGE_PULL_SECRETS: {{ toJson . | quote }}
+  {{- end }}
+  {{- with .Values.probe.tolerations }}
+  PROBE_TOLERATIONS: {{ toJson . | quote }}
+  {{- end }}
+  {{- if .Values.openShift.enabled }}
+  # On OpenShift the probe runs as a dedicated SA bound to a custom least-privilege
+  # SCC (openshift-scc.yaml); the built-in SCCs reject the probe's fixed uid +
+  # seccomp combination. Unset on vanilla k8s → probe admits under the `default` SA.
+  PROBE_SERVICE_ACCOUNT: {{ include "cpu-pinning-operator.probeServiceAccountName" . | quote }}
+  {{- end }}
+  # Per-node Grafana canvas dashboards (grafanaDashboard.enabled): the Node
+  # reconciler writes one topology-sized dashboard ConfigMap per node, labeled
+  # for the Grafana sidecar and placed in its own folder.
+  DASHBOARD_ENABLED: {{ .Values.grafanaDashboard.enabled | quote }}
+  DASHBOARD_NAMESPACE: {{ default .Release.Namespace .Values.grafanaDashboard.namespace | quote }}
+  DASHBOARD_SIDECAR_LABEL: {{ .Values.grafanaDashboard.sidecarLabel | quote }}
+  DASHBOARD_SIDECAR_LABEL_VALUE: {{ .Values.grafanaDashboard.sidecarLabelValue | quote }}
+  DASHBOARD_FOLDER_ANNOTATION: {{ .Values.grafanaDashboard.folderAnnotation | quote }}
+  DASHBOARD_FOLDER: {{ .Values.grafanaDashboard.folder | quote }}
+  DASHBOARD_INSTANCE_NAME: {{ include "cpu-pinning-operator.fullname" . }}
+  DASHBOARD_DATASOURCE_UID: {{ .Values.grafanaDashboard.datasourceUid | quote }}
+  # The per-machine page's log section (the balloons plugin's own log, filtered to
+  # that machine). Same gate as the cluster dashboard's logs row: either the
+  # operator asked for it or a Loki uid is pinned, and without both label names the
+  # section is left out rather than shipped matching every stream in Loki.
+  DASHBOARD_LOKI_ENABLED: {{ (.Values.grafanaDashboard.lokiLogs).enabled | default false | quote }}
+  DASHBOARD_LOKI_DATASOURCE_UID: {{ .Values.grafanaDashboard.lokiDatasourceUid | quote }}
+  DASHBOARD_LOKI_NODE_LABEL: {{ .Values.grafanaDashboard.lokiLabels.node | quote }}
+  DASHBOARD_LOKI_PLUGIN_LABEL: {{ .Values.grafanaDashboard.lokiLabels.pluginWorkload | quote }}
+  DASHBOARD_LOKI_PLUGIN_NAME: {{ .Values.grafanaDashboard.lokiPluginName | quote }}
+  DASHBOARD_LOKI_WORKLOAD_LABEL: {{ .Values.grafanaDashboard.lokiLabels.workload | quote }}

@@ -1,0 +1,90 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+{{- if .Values.certManager.enabled }}
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: {{ include "cpu-pinning-operator.fullname" . }}-{{ .Values.certManager.issuer.name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "cpu-pinning-operator.labels" . | nindent 4 }}
+spec:
+  selfSigned: {}
+---
+# A CA signs the serving cert, so ca.crt survives serving-cert renewals. A
+# self-signed leaf would change it at each renewal, and every pinner of it (the
+# webhook caBundle, reserve peers, the per-namespace readiness CA copies) would
+# lag the new leaf by a sync interval.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ include "cpu-pinning-operator.fullname" . }}-ca
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "cpu-pinning-operator.labels" . | nindent 4 }}
+spec:
+  isCA: true
+  # X.509 caps the CN at 64 characters; fullname may reach 63.
+  commonName: {{ include "cpu-pinning-operator.fullname" . | trunc 61 | trimSuffix "-" }}-ca
+  duration: {{ .Values.certManager.ca.duration }}
+  issuerRef:
+    kind: Issuer
+    name: {{ include "cpu-pinning-operator.fullname" . }}-{{ .Values.certManager.issuer.name }}
+  secretName: {{ include "cpu-pinning-operator.fullname" . }}-ca
+  # Renewals re-certify the same CA key (cert-manager defaults to a new key). Leaves
+  # signed before and after a renewal then verify against either CA certificate, so
+  # replicas whose mounts pick up a renewed serving secret at different moments keep
+  # their mTLS to each other. Rotating the CA key itself is a deliberate reissue,
+  # see docs/secure-configuration.md (TLS and certificates).
+  privateKey:
+    rotationPolicy: Never
+    {{- with .Values.certManager.certificate.privateKey }}
+    algorithm: {{ .algorithm }}
+    size: {{ .size }}
+    {{- end }}
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: {{ include "cpu-pinning-operator.fullname" . }}-ca-issuer
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "cpu-pinning-operator.labels" . | nindent 4 }}
+spec:
+  ca:
+    secretName: {{ include "cpu-pinning-operator.fullname" . }}-ca
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ include "cpu-pinning-operator.fullname" . }}-{{ .Values.certManager.certificate.name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "cpu-pinning-operator.labels" . | nindent 4 }}
+spec:
+  dnsNames:
+    - {{ include "cpu-pinning-operator.fullname" . }}-{{ .Values.webhook.service.name }}.{{ .Release.Namespace }}.svc
+    - {{ include "cpu-pinning-operator.fullname" . }}-{{ .Values.webhook.service.name }}.{{ .Release.Namespace }}.svc.cluster.local
+    # The wait-for-balloons init container verifies the readiness endpoint
+    # against this name (the Service it dials).
+    - {{ include "cpu-pinning-operator.fullname" . }}-balloons-ready.{{ .Release.Namespace }}.svc
+    - {{ include "cpu-pinning-operator.fullname" . }}-balloons-ready.{{ .Release.Namespace }}.svc.cluster.local
+    {{- if .Values.metrics.enabled }}
+    # The metrics endpoint is served with this same cert (TLS metrics), so the
+    # metrics Service DNS names must be covered too — otherwise Prometheus'
+    # serverName verification of the https scrape would fail.
+    - {{ include "cpu-pinning-operator.fullname" . }}-metrics.{{ .Release.Namespace }}.svc
+    - {{ include "cpu-pinning-operator.fullname" . }}-metrics.{{ .Release.Namespace }}.svc.cluster.local
+    {{- end }}
+  issuerRef:
+    kind: Issuer
+    name: {{ include "cpu-pinning-operator.fullname" . }}-ca-issuer
+  secretName: {{ .Values.certManager.certificate.secretName }}
+  {{- with .Values.certManager.certificate.privateKey }}
+  # Defaults to ECDSA P-384 (192-bit security strength); override for RSA/3072 interop.
+  privateKey:
+    algorithm: {{ .algorithm }}
+    size: {{ .size }}
+  {{- end }}
+{{- end }}

@@ -1,0 +1,225 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+{{- /*
+The Loki section of the fleet dashboard: the two template variables and the logs
+row/panel, kept out of dashboards/fleet-overview.json so an install without Loki
+ships a dashboard that has NO Loki variable to fail to resolve. Both fragments
+are spliced over a sentinel string element of the JSON array they belong to, so
+the shipped JSON file stays a valid JSON document on its own.
+
+These blocks are copied verbatim into the dashboard, so they must not contain Go
+template actions -- and, like the rest of the dashboard, no Grafana legend token
+({{ "{{le}}" }} and friends) either, since the document is never passed through `tpl`.
+*/}}
+{{- define "cpu-pinning-operator.fleetDashboard.lokiVars" }}
+{
+        "name": "loki",
+        "label": "Loki data source",
+        "description": "Loki data source the operator-logs panel reads. This variable is only rendered when grafanaDashboard.lokiLogs.enabled or grafanaDashboard.lokiDatasourceUid is set.",
+        "type": "datasource",
+        "query": "loki",
+        "current": "__LOKI_DS_CURRENT__",
+        "hide": 0
+      },
+      {
+        "name": "logsource",
+        "label": "Logs from",
+        "description": "Which log the panel below reads: the operator's own, or the balloons plugin that applies the pinning on every machine. The options are LogQL selector fragments rather than one label's values, because the two components carry different stream labels.",
+        "type": "custom",
+        "query": "Operator (all machines) : __LOKI_WORKLOAD_LABEL__=~\"cpu-pinning-operator.*\",Balloons plugin (all machines) : __LOKI_PLUGIN_LABEL__=\"__LOKI_PLUGIN_NAME__\"",
+        "hide": 0,
+        "multi": false,
+        "includeAll": false,
+        "options": [
+          {
+            "text": "Operator (all machines)",
+            "value": "__LOKI_WORKLOAD_LABEL__=~\"cpu-pinning-operator.*\"",
+            "selected": true
+          },
+          {
+            "text": "Balloons plugin (all machines)",
+            "value": "__LOKI_PLUGIN_LABEL__=\"__LOKI_PLUGIN_NAME__\"",
+            "selected": false
+          }
+        ],
+        "current": {
+          "text": "Operator (all machines)",
+          "value": "__LOKI_WORKLOAD_LABEL__=~\"cpu-pinning-operator.*\"",
+          "selected": true
+        }
+      },
+      {
+        "name": "benign",
+        "label": "Plugin's benign errors",
+        "description": "Whether the panel below hides the two uninformative balloons-plugin ERROR messages: the libmem release of an allocation the plugin never made, and the kubelet's disabled PodResources Get method. They are nearly every ERROR line the plugin writes, so hiding them keeps its level from reading as a permanent fault. Choose Shown for the unfiltered stream; nothing is dropped on the way into Loki.",
+        "type": "custom",
+        "query": "Hidden : != \"libmem: unknown allocation\" != \"PodResources API Get method disabled\",Shown (unfiltered stream) : |= \"\"",
+        "hide": 0,
+        "multi": false,
+        "includeAll": false,
+        "options": [
+          {
+            "text": "Hidden",
+            "value": "!= \"libmem: unknown allocation\" != \"PodResources API Get method disabled\"",
+            "selected": true
+          },
+          {
+            "text": "Shown (unfiltered stream)",
+            "value": "|= \"\"",
+            "selected": false
+          }
+        ],
+        "current": {
+          "text": "Hidden",
+          "value": "!= \"libmem: unknown allocation\" != \"PodResources API Get method disabled\"",
+          "selected": true
+        }
+      }
+{{- end }}
+{{- define "cpu-pinning-operator.fleetDashboard.lokiPanels" }}
+{
+      "type": "row",
+      "title": "Operator logs",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 26
+      },
+      "id": 104
+    },
+    {
+      "type": "logs",
+      "title": "Logs — pick the source above",
+      "description": "Log lines from the source the **Logs from** picker selects, newest first. Read it when a panel above says something is wrong: each decision is logged with its pod or machine. Two benign plugin messages are hidden, `libmem: unknown allocation` and `PodResources API Get method disabled`; pick Shown to see them. Empty means nothing matched, not that logging is broken; see docs/observability.md.",
+      "datasource": {
+        "type": "loki",
+        "uid": "${loki}"
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 27
+      },
+      "id": 16,
+      "options": {
+        "showTime": true,
+        "wrapLogMessage": true,
+        "enableLogDetails": true,
+        "dedupStrategy": "none",
+        "sortOrder": "Descending"
+      },
+      "targets": [
+        {
+          "expr": "{__LOKI_NS_LABEL__=~\"__LOKI_NS_REGEX__\", ${logsource:raw}} ${benign:raw}",
+          "refId": "A"
+        }
+      ]
+    }
+{{- end }}
+{{- if .Values.grafanaDashboard.enabled }}
+{{- if .Values.grafanaDashboard.fleetOverview.enabled }}
+# Cluster dashboard -- a single topology-INDEPENDENT dashboard. Unlike the per-node
+# canvas dashboards (rendered by the operator at runtime because their layout
+# depends on each node's topology), this one is static, so the chart ships it
+# directly as a sidecar-labeled ConfigMap.
+#
+# Its READING ORDER, which the rows follow and the glossary panel states on the
+# page: most important first, then what relates to it, expert detail last.
+#   1. Cluster -- what the fleet is and how full it is, then whether anything is
+#      wrong right now.
+#   2. Machines -- one row per machine; the name links into that machine's own
+#      dashboard ({{ "cpu-pin-node-<node>" }}). This table is the machine picker.
+#   3. How the operator is behaving -- decisions, decision latency, provisioning.
+#      Normal operation, not faults.
+#   4. Failures -- the eight failure counters, collapsed, because "none" is the
+#      normal answer. Then the operator's own logs, when Loki is configured.
+# Group a new panel by what it means, not by where there is room: a row named for
+# faults must not hold panels about healthy behaviour.
+#
+# No count is read through increase()/rate(): these counters move a few times a day,
+# so extrapolating them at a window's edges is unbounded. The counts in row 3 read the
+# last sample every operator process exported, deduplicated per pod and summed, so a
+# rollout does not empty them; the failure counters in row 4 are still the running
+# process's own. docs/observability.md states what each reading covers.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "cpu-pinning-operator.fullname" . }}-fleet-dashboard
+  namespace: {{ .Values.grafanaDashboard.namespace | default .Release.Namespace }}
+  labels:
+    {{- include "cpu-pinning-operator.labels" . | nindent 4 }}
+    {{- with .Values.grafanaDashboard.sidecarLabel }}
+    {{ . }}: {{ $.Values.grafanaDashboard.sidecarLabelValue | quote }}
+    {{- end }}
+  {{- if and .Values.grafanaDashboard.folderAnnotation .Values.grafanaDashboard.folder }}
+  annotations:
+    {{ .Values.grafanaDashboard.folderAnnotation }}: {{ .Values.grafanaDashboard.folder | quote }}
+  {{- end }}
+data:
+  # The dashboard JSON ships raw (it is full of Grafana legend tokens like
+  # {{ "{{numa}}" }} that `tpl` would choke on), so its Loki-side knobs are
+  # injected by targeted string replacement over sentinel tokens rather than
+  # templating the whole document. Defaults target OTLP/k8sattributes stream
+  # labels (OpenTelemetry Collector → Loki /otlp); promtail/loki-native clusters
+  # override grafanaDashboard.lokiLabels.* to the bare `namespace`/`pod` scheme.
+  cpu-pinning-fleet-overview.json: |-
+    {{- $dash := .Files.Get "dashboards/fleet-overview.json" }}
+    {{- /* The Loki section is spliced in only when it can resolve: either the
+           operator asked for it (lokiLogs.enabled) or a uid is pinned. Gating on
+           the uid alone would drop the documented single-Loki auto-select path.
+           When it is off, the sentinel element AND its leading comma are removed,
+           so the dashboard carries no Loki variable and no logs panel at all --
+           an absent variable cannot report "Datasource was not found", which is
+           what an empty-but-pinned uid does. */}}
+    {{- $lokiOn := or (.Values.grafanaDashboard.lokiLogs).enabled (ne (.Values.grafanaDashboard.lokiDatasourceUid | toString) "") }}
+    {{- if $lokiOn }}
+    {{- $dash = $dash | replace "\"__LOKI_VARS__\"" (include "cpu-pinning-operator.fleetDashboard.lokiVars" . | trim) }}
+    {{- $dash = $dash | replace "\"__LOKI_PANELS__\"" (include "cpu-pinning-operator.fleetDashboard.lokiPanels" . | trim) }}
+    {{- else }}
+    {{- $dash = regexReplaceAll ",\\s*\"__LOKI_VARS__\"" $dash "" }}
+    {{- $dash = regexReplaceAll ",\\s*\"__LOKI_PANELS__\"" $dash "" }}
+    {{- end }}
+    {{- $dash = $dash | replace "__LOKI_NS_LABEL__" .Values.grafanaDashboard.lokiLabels.namespace }}
+    {{- /* The logs panel selects on BOTH components' namespaces, because the balloons
+           plugin need not share the operator's: it may be pre-installed in
+           kube-system. A selector built from the operator's own streams alone
+           excludes a plugin installed elsewhere, silently. */}}
+    {{- $nsRegex := .Release.Namespace }}
+    {{- $balloonsNS := include "cpu-pinning-operator.balloonsNamespace" . }}
+    {{- if ne $balloonsNS .Release.Namespace }}
+    {{- $nsRegex = printf "%s|%s" .Release.Namespace $balloonsNS }}
+    {{- end }}
+    {{- $dash = $dash | replace "__LOKI_NS_REGEX__" $nsRegex }}
+    {{- $dash = $dash | replace "__LOKI_WORKLOAD_LABEL__" .Values.grafanaDashboard.lokiLabels.workload }}
+    {{- $dash = $dash | replace "__LOKI_PLUGIN_LABEL__" .Values.grafanaDashboard.lokiLabels.pluginWorkload }}
+    {{- $dash = $dash | replace "__LOKI_PLUGIN_NAME__" .Values.grafanaDashboard.lokiPluginName }}
+    {{- /* Both datasource variables' `current` objects follow the per-node canvas:
+           when the chart pins a uid it goes in `value` alone, and when the value is
+           empty `current` collapses to `{}` so Grafana auto-selects the default data
+           source of that type at import -- portable across clusters whose uid is not
+           literally "prometheus"/"loki" (e.g. OpenShift UWM/Thanos, or a Loki
+           provisioned with an auto-assigned uid).
+           Two shapes are wrong here. A `current` holding an EMPTY value with
+           selected: true makes Grafana take the pin at face value and look up a
+           data source whose uid is the empty string. And `text` is the data
+           source's NAME, which a chart given only a uid cannot know: a uid written
+           there makes Grafana look for a source of that name, and the variable
+           plus everything bound to it goes red. Absent, Grafana falls back to the
+           same auto-select the empty pin uses. */}}
+    {{- $promCurrent := dict }}
+    {{- with .Values.grafanaDashboard.datasourceUid }}
+    {{- $promCurrent = dict "value" (. | toString) "selected" true }}
+    {{- end }}
+    {{- $dash = $dash | replace "\"__PROM_DS_CURRENT__\"" ($promCurrent | toJson) }}
+    {{- $lokiCurrent := dict }}
+    {{- with .Values.grafanaDashboard.lokiDatasourceUid }}
+    {{- $lokiCurrent = dict "value" (. | toString) "selected" true }}
+    {{- end }}
+    {{- $dash = $dash | replace "\"__LOKI_DS_CURRENT__\"" ($lokiCurrent | toJson) }}
+    {{- $dash | nindent 4 }}
+{{- end }}
+{{- end }}

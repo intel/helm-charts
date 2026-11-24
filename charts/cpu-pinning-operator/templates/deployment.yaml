@@ -1,0 +1,215 @@
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "cpu-pinning-operator.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "cpu-pinning-operator.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "cpu-pinning-operator.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        # Roll the manager when its config (env ConfigMap) changes.
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "cpu-pinning-operator.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "cpu-pinning-operator.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: manager
+          command:
+            - /manager
+          args:
+            {{- if .Values.leaderElection.enabled }}
+            - --leader-elect
+            # Derive the lease name from the release so releases with distinct
+            # fullnames (canary/blue-green) hold distinct leases. The fullname
+            # truncates to 63 chars, so releases sharing the same truncated
+            # prefix would still collide.
+            - --leader-election-id={{ include "cpu-pinning-operator.fullname" . }}
+            {{- end }}
+            {{- if .Values.metrics.enabled }}
+            - --metrics-bind-address=:{{ .Values.metrics.port }}
+            # Pass --metrics-secure only when the server actually runs
+            # (metrics.enabled): the binary defaults --metrics-secure to true, so
+            # omitting the flag when metrics.secure=false would silently keep HTTPS
+            # on. When secure, the endpoint is served over HTTPS using the serving
+            # cert mounted at --cert-dir (the same cert-manager cert the webhook uses).
+            - --metrics-secure={{ .Values.metrics.secure }}
+            # Same reasoning: the binary defaults --metrics-require-auth to true, so
+            # the opt-out only takes effect if the flag is passed explicitly. It is
+            # applied only alongside --metrics-secure (no bearer token over plaintext).
+            - --metrics-require-auth={{ .Values.metrics.requireAuth }}
+            {{- else }}
+            # metrics.enabled=false: disable the controller-runtime metrics server
+            # entirely. "0" is controller-runtime's documented sentinel to skip
+            # server creation (metricsserver.Options.BindAddress == "0"); without it
+            # the server would still listen on the Pod IP and expose /metrics even
+            # though the metrics Service and container port are not rendered.
+            # --metrics-secure is moot when the server is off, so it is not passed.
+            - --metrics-bind-address=0
+            {{- end }}
+            - --health-probe-bind-address=:{{ .Values.healthProbe.port }}
+            - --balloons-ready-bind-address=:{{ .Values.balloonsReady.port }}
+            # Always passed: the binary defaults it to true, so omitting it when
+            # secure=false would silently keep TLS on.
+            - --balloons-ready-secure={{ not (empty (include "cpu-pinning-operator.balloonsReadySecure" .)) }}
+            - --cert-dir={{ .Values.webhook.certDir }}
+            - --webhook-port={{ .Values.webhook.port }}
+            {{- with .Values.webhook.reservationTTL }}
+            # In-process admission reservation lifetime. Must outlive the NRI
+            # balloons plugin's NRT publish latency; raise it on slow clusters.
+            # Unset uses the manager's built-in default (90s).
+            - --reservation-ttl={{ . }}
+            {{- end }}
+            {{- if include "cpu-pinning-operator.reserveAuthorityEnabled" . }}
+            # Leader-authoritative reserve (HA). Forwards ONLY the reserve step to
+            # the lease holder so the fleet accounts headroom against one store. A
+            # commit it cannot take falls back to the local store under
+            # capacityCheck.mode warn/off and DENIES under enforce. The four render
+            # conditions are in cpu-pinning-operator.reserveAuthorityEnabled; a
+            # single-replica install fails the second and pays zero cost.
+            - --reserve-authority
+            - --reserve-port={{ .Values.webhook.reserveAuthority.port }}
+            {{- end }}
+            {{- with .Values.driftEviction.interval }}
+            # Steady-state pace of drift-driven pod evictions (one every interval).
+            # Paces a fleet-wide re-pin after a config edit; unset uses the manager
+            # default (10s = 6/min).
+            - --drift-eviction-interval={{ . }}
+            {{- end }}
+            {{- if gt (int .Values.driftEviction.burst) 0 }}
+            # Token-bucket burst: evictions allowed back-to-back before the interval
+            # pace applies. Unset/0 uses the manager default (2).
+            - --drift-eviction-burst={{ int .Values.driftEviction.burst }}
+            {{- end }}
+            - --zap-log-level={{ .Values.log.level }}
+            - --zap-devel={{ .Values.log.development }}
+          image: {{ include "cpu-pinning-operator.image" . | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            # POD_NAMESPACE must stay inline: it comes from a fieldRef, which a
+            # ConfigMap cannot express. All static settings live in the config
+            # ConfigMap loaded via envFrom below.
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          envFrom:
+            - configMapRef:
+                name: {{ include "cpu-pinning-operator.fullname" . }}-config
+          ports:
+            {{- if .Values.metrics.enabled }}
+            - containerPort: {{ .Values.metrics.port }}
+              name: metrics
+              protocol: TCP
+            {{- end }}
+            - containerPort: {{ .Values.webhook.port }}
+              name: webhook-server
+              protocol: TCP
+            {{- if include "cpu-pinning-operator.reserveAuthorityEnabled" . }}
+            # Internal leader-authoritative reserve endpoint (mTLS). Followers dial
+            # the lease holder here to forward the reserve step; NetworkPolicy
+            # restricts ingress to the operator's own replicas.
+            - containerPort: {{ .Values.webhook.reserveAuthority.port }}
+              name: reserve
+              protocol: TCP
+            {{- end }}
+            # Per-node balloons-readiness endpoint the injected wait-for-balloons
+            # init container polls; exposed via the balloons-ready Service.
+            - containerPort: {{ .Values.balloonsReady.port }}
+              name: balloons-ready
+              protocol: TCP
+          volumeMounts:
+            # Writable scratch for a read-only root filesystem: Go's os.TempDir()
+            # resolves to /tmp, so the manager cannot start read-only-rootfs
+            # without a writable /tmp. With the default webhook.certDir this also
+            # covers the cert dir's parent path under /tmp. The cert secret itself
+            # is mounted read-only at webhook.certDir below.
+            - mountPath: /tmp
+              name: tmp
+            - mountPath: {{ .Values.webhook.certDir }}
+              name: cert
+              readOnly: true
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: {{ .Values.healthProbe.port }}
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: {{ .Values.healthProbe.port }}
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+      volumes:
+        # Writable scratch mounted at /tmp so the manager runs read-only-rootfs
+        # (Go's os.TempDir()); the cert secret is a separate mount below.
+        - name: tmp
+          emptyDir: {}
+        - name: cert
+          secret:
+            defaultMode: 420
+            secretName: {{ .Values.certManager.certificate.secretName }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      affinity:
+        {{- with .Values.affinity }}
+        # Operator-supplied affinity wholly replaces the chart defaults below.
+        {{- toYaml . | nindent 8 }}
+        {{- else }}
+        # Default HA scheduling for the manager replicas. Both rules are SOFT
+        # (preferred, not required) so a single-node cluster still schedules
+        # every replica instead of leaving one Pending — the webhook must come
+        # up even where nodes < replicaCount.
+        podAntiAffinity:
+          # Spread replicas across nodes so a single node loss can't take out
+          # every manager (and admission with it). Matches the manager via the
+          # same selectorLabels the Deployment/PDB use.
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                topologyKey: kubernetes.io/hostname
+                labelSelector:
+                  matchLabels:
+                    {{- include "cpu-pinning-operator.selectorLabels" . | nindent 20 }}
+        nodeAffinity:
+          # Prefer control-plane nodes where the label exists. Soft, so it never
+          # blocks scheduling on clusters without that label. If your
+          # control-plane nodes are tainted NoSchedule, add a matching toleration
+          # via .Values.tolerations (not shipped by default).
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: node-role.kubernetes.io/control-plane
+                    operator: Exists
+        {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      terminationGracePeriodSeconds: 10

@@ -1,0 +1,1859 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "graphTooltip": 0,
+  "title": "CPU Pinning — cluster",
+  "uid": "cpu-pinning-fleet",
+  "tags": [
+    "cpu-pinning-operator"
+  ],
+  "schemaVersion": 39,
+  "version": 1,
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "links": [],
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "label": "Data source",
+        "description": "Prometheus data source the panels read. Left unset by default so Grafana selects the default Prometheus data source on import.",
+        "type": "datasource",
+        "query": "prometheus",
+        "current": "__PROM_DS_CURRENT__",
+        "hide": 0
+      },
+      "__LOKI_VARS__"
+    ]
+  },
+  "panels": [
+    {
+      "type": "row",
+      "title": "How to read this page (open me first)",
+      "collapsed": true,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 100,
+      "panels": [
+        {
+          "type": "text",
+          "title": "What the words on this dashboard mean",
+          "description": "Glossary of the operator's vocabulary — balloon, span, NUMA, reserved pool, hyperthread sibling, stranded capacity, drift, bypass, ghost allocation, pinned vs skipped vs denied — plus how to get from this page to one machine. Reads no metrics. The same text is in docs/observability.md.",
+          "gridPos": {
+            "h": 15,
+            "w": 24,
+            "x": 0,
+            "y": 1
+          },
+          "id": 1,
+          "options": {
+            "mode": "markdown",
+            "content": "# How to read this page\n\nThis page is about the **whole cluster**, and it is ordered most important first:\n\n1. **Cluster** — what the fleet is and how full it is, then whether anything is\n   wrong right now. 0 across that second line is the healthy reading.\n2. **Machines** — one row per machine. **Click a machine's name to open that\n   machine's own page**: its per-core map next to its own numbers. This table is\n   the machine picker; the page has no machine dropdown.\n3. **How the operator is behaving** — how many pods it has decided on, how long a\n   decision takes against the 10s the API server allows, and how often it has\n   re-provisioned a machine. Normal operation, not faults.\n4. **Failures** — collapsed, because \"none\" is the normal answer. Open it when a machine's\n   **Status** column is not OK, or when a pod did not get the pinning\n   you expected: it lists only what actually happened.\n\nNo count on this page is extrapolated. The three counts under **How the operator is\nbehaving** add up the running totals of every operator process Prometheus holds\na sample of from the last 30 days, so a rollout does not clear them. A process that\nran longer counts its earlier decisions too, and the counts step down as the oldest\nprocess ages out of that window. The Failures counts come from the processes running now, so\na replica restart dips the total rather than resetting it.\n\nThe operator pins selected pods onto fixed CPUs so they stop competing for CPU\ntime with other pods on the node. The words it uses:\n\n| Term | What it means |\n| --- | --- |\n| **Pinned pod** | A pod the operator bound to a fixed set of CPUs. No other pod is placed on those CPUs; host processes and interrupts are not isolated. |\n| **Skipped pod** | A pod that matched a pinning policy but was deliberately left unpinned (for example it asked for half a CPU, which cannot be pinned). It still runs, just without dedicated CPUs. |\n| **Denied pod** | A pod the operator refused at admission, because there was no room for it, because its span is unsupported, because the balloons plugin on its machine was not ready (under `capacityCheck.mode: enforce`), or because no machine is provisioned for balloons. A denied pod never starts and never exists, so a pod listing cannot show it; **Admission decisions** counts it and the Event names it. |\n| **Balloon** | The named set of CPUs a pinned pod's containers are placed into. Pods sharing a balloon share its CPUs. |\n| **Span** | How many NUMA nodes one balloon is allowed to stretch across. `span1` stays inside a single NUMA node, which keeps memory access local; a wider span buys room and memory bandwidth at the cost of remote-memory latency. The best span depends on the workload. |\n| **NUMA node** | One CPU-and-memory locality domain of the machine. CPUs reach their own NUMA node's memory fastest, so a balloon that stays inside one avoids remote-memory access. |\n| **Reserved pool** | CPUs deliberately kept out of pinning, for everything that is *not* pinned: system daemons, kubelet, and ordinary pods. |\n| **Hyperthread sibling** | The second thread of a physical core. The machine table's **Hyperthread siblings** column reads one of four ways: `held-back` — kept out of the pinning pool, so no pod is pinned to them (the OS can still run host work there); `reserved-pool` — they *are* the reserved pool, so everything unpinned runs on them and no pinned pod can; `allocatable` — ordinary CPUs a pinned pod can land on; `no-siblings` — that machine runs one thread per core, so there is none. |\n| **Stranded capacity** | Free CPUs the machine's *widest* balloon span cannot use, because they are split unevenly across NUMA nodes and a balloon spanning N of them takes the same count on each. A narrower pod still fits on them, so this is a limit on one shape and not a fault. |\n| **Drift** | A pod that is still running with the pinning it was given, but the configuration has changed since — so what it runs on no longer matches what it should run on. |\n| **Bypass** | A pod the operator meant to pin but admitted **unpinned** after an internal error. It runs on shared CPUs without anyone asking for that. |\n| **Ghost allocation** | CPUs still booked to a pod that no longer exists. The capacity is not really in use, but the node's bookkeeping believes it is, so new pods can be refused. |\n\nHealthy cluster, in short: **no bypasses, no ghosts, every reserved pool below\n1**, and the pinned share matching what you deployed. Stranded capacity is amber\nrather than red: it says the widest balloon shape has nowhere to go, while every\nnarrower pod still places.\n\nThe same glossary is in `docs/observability.md`."
+          }
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "title": "Cluster",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 1
+      },
+      "id": 101
+    },
+    {
+      "type": "stat",
+      "title": "Machines managed",
+      "description": "Machines this operator has provisioned for pinning, and the rows of the table below. Healthy is every machine you expect; compare with `count(kube_node_info)`. Red at 0: nothing is provisioned, and under enforcePinning every selected pod is refused — those refusals read as 'denied' on **Admission decisions**. No metric knows how many machines should be managed, so above 0 is uncoloured.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 2
+      },
+      "id": 2,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "textMode": "auto",
+        "orientation": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "text",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "count(max by (node) (cpu_pinning_node_logical_cpus)) or vector(0)",
+          "refId": "A",
+          "instant": true,
+          "legendFormat": "machines managed",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          }
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Logical CPUs",
+      "description": "Hardware threads across every managed machine. This is the denominator of the pinned share.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 2
+      },
+      "id": 3,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "textMode": "auto",
+        "orientation": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          },
+          "noValue": "no machines reporting"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "sum(max by (node, numa) (cpu_pinning_node_logical_cpus))",
+          "refId": "A",
+          "instant": true,
+          "legendFormat": "Logical CPUs, all machines",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          }
+        }
+      ]
+    },
+    {
+      "type": "bargauge",
+      "title": "Who owns the cluster's CPUs",
+      "description": "Every CPU on every managed machine, by who holds it: pinned to a workload, kept in the reserved pool, free, or out of reach because that machine's policy keeps hyperthread siblings out of pinning. Nothing can be placed on those, so the four sum to the fleet's logical CPUs. Green is pinned, purple reserved, grey free, on both pages. None of the four is good or bad on its own.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 8,
+        "y": 2
+      },
+      "id": 21,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "displayMode": "gradient",
+        "orientation": "horizontal",
+        "showUnfilled": true,
+        "valueMode": "color",
+        "minVizHeight": 16,
+        "minVizWidth": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "min": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#7EB26D"
+          },
+          "noValue": "no machines reporting"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "reserved pool"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-purple"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "free"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#4b5563"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "not available for pinning"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "text"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "expr": "sum(cpu_pinning:cpu_used:per_balloon{balloon!~\"free|reserved\"}) or count(max by (node, cpu) (cpu_pinning_cpu_assignment{balloon!~\"free|reserved\"})) or vector(0)",
+          "refId": "A",
+          "instant": true,
+          "legendFormat": "pinned to workloads",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          }
+        },
+        {
+          "expr": "sum(max by (node) (cpu_pinning_node_reserved_cpus)) or vector(0)",
+          "refId": "B",
+          "instant": true,
+          "legendFormat": "reserved pool",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          }
+        },
+        {
+          "expr": "sum(cpu_pinning:cpu_free:per_numa) or clamp_min(sum(max by (node, numa) (cpu_pinning_node_pinnable_cpus) or max by (node, numa) (cpu_pinning_node_logical_cpus)) - (count(max by (node, cpu) (cpu_pinning_cpu_assignment{balloon!=\"free\"})) or vector(0)), 0)",
+          "refId": "C",
+          "instant": true,
+          "legendFormat": "free",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          }
+        },
+        {
+          "expr": "sum(max by (node, numa) (cpu_pinning_node_logical_cpus) - max by (node, numa) (cpu_pinning_node_pinnable_cpus)) or vector(0)",
+          "refId": "D",
+          "instant": true,
+          "legendFormat": "not available for pinning",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          }
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Machines that can take a pinned pod",
+      "description": "Managed machines with a CPU still free for a workload to be pinned to, counted per machine because free CPUs are not comparable units across hyperthread policies. Healthy is every managed machine; 0 means the next pinned pod has nowhere to go — free capacity, drain, or add a machine. It answers the narrowest pod there is, one CPU on one NUMA node.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 16,
+        "y": 2
+      },
+      "id": 22,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "textMode": "auto",
+        "orientation": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "noValue": "no machines reporting"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "count(count by (node) (max by (node, cpu) (cpu_pinning_cpu_assignment{balloon=\"free\"}))) or (count(max by (node) (cpu_pinning_node_logical_cpus)) * 0)",
+          "refId": "A",
+          "instant": true,
+          "legendFormat": "machines that can take a pinned pod",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          }
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Pinned pods",
+      "description": "Distinct pods holding at least one pinned CPU, in the colour the dashboards paint pinned CPUs. Compare it with the replica count you deployed.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 20,
+        "y": 2
+      },
+      "id": 11,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "textMode": "auto",
+        "orientation": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#7EB26D"
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "count(max by (workload_namespace, workload_pod) (cpu_pinning_cpu_assignment{balloon!~\"free|reserved\", workload_pod!=\"\"})) or vector(0)",
+          "refId": "A",
+          "instant": true,
+          "legendFormat": "Pods running on pinned CPUs",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          }
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Ghost allocations",
+      "description": "CPUs still booked to pods that no longer exist, which makes a machine refuse new ones. Healthy is 0.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 0,
+        "y": 6
+      },
+      "id": 9,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "textMode": "auto",
+        "orientation": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "noValue": "not reported by any machine"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "sum(max by (node) (cpu_pinning_ghost_allocations))",
+          "refId": "A",
+          "instant": true,
+          "legendFormat": "Ghost allocations, all machines",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          }
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Machines the widest span cannot fill",
+      "description": "Machines whose free CPUs are too unevenly spread across NUMA nodes for a max-span balloon to absorb, so the widest shape has nowhere to go while narrower pods still place there. Healthy is 0; 'not measured' means unknown, not clean.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 8,
+        "y": 6
+      },
+      "id": 8,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "textMode": "auto",
+        "orientation": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              }
+            ]
+          },
+          "noValue": "not measured on any machine"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "count(max by (node) (cpu_pinning_cpu_fragmentation) > 0) or (count(max by (node) (cpu_pinning_cpu_fragmentation)) * 0)",
+          "refId": "A",
+          "instant": true,
+          "legendFormat": "Machines the widest span cannot fill",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          }
+        }
+      ]
+    },
+    {
+      "type": "gauge",
+      "title": "Worst reserved pool",
+      "description": "The most oversubscribed reserved pool in the fleet. Above 1 the unpinned work has less CPU than was set aside for it, and an alert fires.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 16,
+        "y": 6
+      },
+      "id": 7,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "min": 0,
+          "max": 2,
+          "decimals": 2,
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "not reported by any machine",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.8
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "max(max by (node) (cpu_pinning_reserved_pool_utilization_ratio))",
+          "refId": "A",
+          "instant": true,
+          "legendFormat": "Worst reserved pool on any machine",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          }
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "title": "Machines",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 10
+      },
+      "id": 102
+    },
+    {
+      "type": "table",
+      "title": "Machines — one row per managed machine (click a name to open it)",
+      "description": "**Status** sorts worst first: ghost allocations are a fault to act on, while 'no room for the widest span' means only that free CPUs are too spread out for a max-span balloon — narrower pods still place. 'not measured' is unknown, not clean. **Hyperthread siblings** is what became of each core's second thread on that machine; the glossary has the four readings.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 11
+      },
+      "id": 12,
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "countRows": false,
+          "fields": ""
+        },
+        "sortBy": [
+          {
+            "displayName": "Status",
+            "desc": true
+          }
+        ]
+      },
+      "targets": [
+        {
+          "expr": "count by (node) (max by (node, numa) (cpu_pinning_node_logical_cpus))",
+          "refId": "A",
+          "instant": true,
+          "format": "table",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          }
+        },
+        {
+          "expr": "sum by (node) (max by (node, numa) (cpu_pinning_node_logical_cpus))",
+          "refId": "B",
+          "instant": true,
+          "format": "table",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          }
+        },
+        {
+          "expr": "sum by (node) (cpu_pinning:cpu_used:per_balloon{balloon!~\"free|reserved\"}) or count by (node) (max by (node, cpu) (cpu_pinning_cpu_assignment{balloon!~\"free|reserved\"})) or (max by (node) (cpu_pinning_node_logical_cpus) * 0)",
+          "refId": "C",
+          "instant": true,
+          "format": "table",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          }
+        },
+        {
+          "expr": "sum by (node) (cpu_pinning:cpu_free:per_numa) or clamp_min(sum by (node) (max by (node, numa) (cpu_pinning_node_pinnable_cpus) or max by (node, numa) (cpu_pinning_node_logical_cpus)) - (count by (node) (max by (node, cpu) (cpu_pinning_cpu_assignment{balloon!=\"free\"})) or (max by (node) (cpu_pinning_node_logical_cpus) * 0)), 0)",
+          "refId": "D",
+          "instant": true,
+          "format": "table",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          }
+        },
+        {
+          "expr": "(sum by (node) (cpu_pinning:cpu_used:per_balloon{balloon!~\"free|reserved\"}) or count by (node) (max by (node, cpu) (cpu_pinning_cpu_assignment{balloon!~\"free|reserved\"})) or (max by (node) (cpu_pinning_node_logical_cpus) * 0)) / sum by (node) (max by (node, numa) (cpu_pinning_node_pinnable_cpus) or max by (node, numa) (cpu_pinning_node_logical_cpus))",
+          "refId": "E",
+          "instant": true,
+          "format": "table",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          }
+        },
+        {
+          "expr": "max by (node) (cpu_pinning_node_reserved_cpus)",
+          "refId": "F",
+          "instant": true,
+          "format": "table",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          }
+        },
+        {
+          "expr": "max by (node) (cpu_pinning_reserved_pool_utilization_ratio)",
+          "refId": "G",
+          "instant": true,
+          "format": "table",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          }
+        },
+        {
+          "expr": "max by (node) (cpu_pinning_cpu_fragmentation)",
+          "refId": "H",
+          "instant": true,
+          "format": "table",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          }
+        },
+        {
+          "expr": "clamp_max(max by (node) (cpu_pinning_cpu_fragmentation), 1) + (2 * clamp_max(max by (node) (cpu_pinning_ghost_allocations), 1))",
+          "refId": "I",
+          "instant": true,
+          "format": "table",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          }
+        },
+        {
+          "expr": "max by (node, policy) (cpu_pinning_ht_sibling_policy == 1)",
+          "refId": "J",
+          "instant": true,
+          "format": "table",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          }
+        },
+        {
+          "expr": "max by (node) (cpu_pinning_webhook_reservations_live) or (max by (node) (cpu_pinning_node_logical_cpus) * 0)",
+          "refId": "K",
+          "instant": true,
+          "format": "table",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          }
+        }
+      ],
+      "transformations": [
+        {
+          "id": "joinByField",
+          "options": {
+            "byField": "node",
+            "mode": "outer"
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "Value #J": true,
+              "Time 1": true,
+              "Time 2": true,
+              "Time 3": true,
+              "Time 4": true,
+              "Time 5": true,
+              "Time 6": true,
+              "Time 7": true,
+              "Time 8": true,
+              "Time 9": true,
+              "Time 10": true,
+              "Time 11": true
+            },
+            "indexByName": {
+              "node": 0,
+              "Value #A": 2,
+              "Value #B": 3,
+              "Value #C": 4,
+              "Value #D": 5,
+              "Value #E": 6,
+              "Value #F": 7,
+              "Value #G": 8,
+              "Value #H": 9,
+              "Value #I": 1,
+              "Value #J": 12,
+              "Value #K": 11,
+              "policy": 10
+            },
+            "renameByName": {
+              "node": "Machine",
+              "policy": "Hyperthread siblings",
+              "Value #A": "NUMA nodes",
+              "Value #B": "Logical CPUs",
+              "Value #C": "Pinned",
+              "Value #D": "Free",
+              "Value #E": "Pinned share",
+              "Value #F": "Reserved CPUs",
+              "Value #G": "Reserved pool used",
+              "Value #H": "Free CPUs the widest span cannot use",
+              "Value #I": "Status",
+              "Value #K": "Live reservations"
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Machine"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 260
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Open this machine's page (core map + its own numbers)",
+                    "url": "/d/cpu-pin-node-${__value.text}?var-datasource=${datasource}",
+                    "targetBlank": false
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Pinned share"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              },
+              {
+                "id": "min",
+                "value": 0
+              },
+              {
+                "id": "max",
+                "value": 1
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "gauge",
+                  "mode": "gradient"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#7EB26D"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Reserved pool used"
+            },
+            "properties": [
+              {
+                "id": "decimals",
+                "value": 2
+              },
+              {
+                "id": "min",
+                "value": 0
+              },
+              {
+                "id": "max",
+                "value": 2
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "gauge",
+                  "mode": "gradient"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 0.8
+                    },
+                    {
+                      "color": "red",
+                      "value": 1
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Free CPUs the widest span cannot use"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 240
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 1
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "noValue",
+                "value": "not measured"
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Status"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 290
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "noValue",
+                "value": "not measured"
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "red",
+                      "value": 1
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "text": "OK",
+                        "color": "green",
+                        "index": 0
+                      },
+                      "1": {
+                        "text": "no room for the widest span",
+                        "color": "orange",
+                        "index": 1
+                      },
+                      "2": {
+                        "text": "ghost allocations",
+                        "color": "red",
+                        "index": 2
+                      },
+                      "3": {
+                        "text": "ghost allocations; no room for the widest span",
+                        "color": "red",
+                        "index": 3
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Pinned"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#7EB26D"
+                }
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Free"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#4b5563"
+                }
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Reserved CPUs"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-purple"
+                }
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "row",
+      "title": "How the operator is behaving",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 20
+      },
+      "id": 105
+    },
+    {
+      "type": "bargauge",
+      "title": "Admission decisions",
+      "description": "Share of each admission outcome, count beside it. 'skipped' is a pod deliberately left alone, not a fault. 'denied' is a pod refused for no room, an unsupported span or (under enforce) an unready plugin; it never exists, so nothing else counts it. 'error' is the webhook failing to decide — act on it. Running totals of every operator process seen in the last 30 days.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 0,
+        "y": 21
+      },
+      "id": 10,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "displayMode": "basic",
+        "orientation": "horizontal",
+        "showUnfilled": true,
+        "valueMode": "color",
+        "minVizHeight": 12,
+        "minVizWidth": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "min": 0,
+          "noValue": "no decisions yet",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "pinned"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#7EB26D"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "#7EB26D",
+                      "value": null
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "skipped"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#4b5563"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "#4b5563",
+                      "value": null
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "denied"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "orange",
+                      "value": null
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "error"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "expr": "sum by (result) (max by (pod, result) (last_over_time(cpu_pinning_webhook_admission_seconds_count[30d])))",
+          "refId": "A",
+          "instant": true,
+          "legendFormat": "{{result}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          }
+        },
+        {
+          "expr": "sum(max by (pod, result) (last_over_time(cpu_pinning_webhook_admission_seconds_count[30d])))",
+          "refId": "B",
+          "instant": true,
+          "format": "table",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          }
+        }
+      ],
+      "transformations": [
+        {
+          "id": "configFromData",
+          "options": {
+            "configRefId": "B",
+            "applyTo": {
+              "id": "byType",
+              "options": "number"
+            },
+            "mappings": [
+              {
+                "fieldName": "Value",
+                "handlerKey": "max",
+                "reducerId": "lastNotNull"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "type": "bargauge",
+      "title": "How long a decision takes, out of the 10s allowed",
+      "description": "Webhook decision time, 99th percentile and average over every operator process Prometheus still holds (any with a sample in the last 30 days), drawn against the API server's 10s budget: a barely visible bar is healthy. CPUPinningWebhookLatencyHigh fires at 8s; at 10s the API server admits the pod unpinned. Rising means decisions are slow — check API round-trip and capacity-lookup latency.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 8,
+        "y": 21
+      },
+      "id": 19,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "displayMode": "basic",
+        "orientation": "horizontal",
+        "showUnfilled": true,
+        "valueMode": "color",
+        "minVizHeight": 12,
+        "minVizWidth": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "decimals": 0,
+          "min": 0,
+          "max": 10,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 8
+              },
+              {
+                "color": "dark-red",
+                "value": 10
+              }
+            ]
+          },
+          "noValue": "no decisions yet"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.99, sum by (le) (max by (pod, result, le) (last_over_time(cpu_pinning_webhook_admission_seconds_bucket[30d]))))",
+          "refId": "A",
+          "instant": true,
+          "legendFormat": "99th percentile",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          }
+        },
+        {
+          "expr": "sum(max by (pod, result) (last_over_time(cpu_pinning_webhook_admission_seconds_sum[30d]))) / sum(max by (pod, result) (last_over_time(cpu_pinning_webhook_admission_seconds_count[30d])))",
+          "refId": "B",
+          "instant": true,
+          "legendFormat": "average",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          }
+        }
+      ]
+    },
+    {
+      "type": "bargauge",
+      "title": "Machine configuration changes",
+      "description": "Share of each provisioning outcome, count beside it. 'provisioned', 'updated' and 'deprovisioned' count a write, so a reconcile that changes nothing counts nothing; its Node events name what was applied. 'failed' counts each failed topology probe, retried every minute, so it keeps rising while a machine stays broken. Running totals of every operator process seen in the last 30 days.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 16,
+        "y": 21
+      },
+      "id": 15,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "displayMode": "basic",
+        "orientation": "horizontal",
+        "showUnfilled": true,
+        "valueMode": "color",
+        "minVizHeight": 12,
+        "minVizWidth": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          },
+          "min": 0,
+          "noValue": "nothing provisioned yet"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "provisioned"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "updated"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "deprovisioned"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#4b5563"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "#4b5563",
+                      "value": null
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "failed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "expr": "sum by (outcome) (max by (pod, node, outcome) (last_over_time(cpu_pinning_node_provisioning_total[30d])))",
+          "refId": "A",
+          "instant": true,
+          "legendFormat": "{{outcome}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          }
+        },
+        {
+          "expr": "sum(max by (pod, node, outcome) (last_over_time(cpu_pinning_node_provisioning_total[30d])))",
+          "refId": "B",
+          "instant": true,
+          "format": "table",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          }
+        }
+      ],
+      "transformations": [
+        {
+          "id": "configFromData",
+          "options": {
+            "configRefId": "B",
+            "applyTo": {
+              "id": "byType",
+              "options": "number"
+            },
+            "mappings": [
+              {
+                "fieldName": "Value",
+                "handlerKey": "max",
+                "reducerId": "lastNotNull"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "title": "Failures",
+      "collapsed": true,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 25
+      },
+      "id": 103,
+      "panels": [
+        {
+          "type": "table",
+          "title": "Failures by kind",
+          "description": "One row per failure that has happened: a healthy cluster shows the empty message. **Left unpinned on purpose** is deliberate and carries no colour. The two refusal rows count reports, not pods — a blocked pod is reported again every 10 minutes, so two pods stuck for an hour add about 12, and the PinningBlocked Events name them. Each row's metric and remedy are in docs/observability.md.",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "gridPos": {
+            "h": 5,
+            "w": 24,
+            "x": 0,
+            "y": 26
+          },
+          "id": 13,
+          "options": {
+            "showHeader": true,
+            "cellHeight": "sm",
+            "footer": {
+              "show": false,
+              "reducer": [
+                "sum"
+              ],
+              "countRows": false,
+              "fields": ""
+            },
+            "sortBy": [
+              {
+                "displayName": "How many",
+                "desc": true
+              }
+            ]
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "decimals": 0,
+              "custom": {
+                "align": "auto",
+                "cellOptions": {
+                  "type": "auto"
+                },
+                "inspect": false
+              },
+              "noValue": "Nothing has gone wrong on the replicas running now."
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "How many"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": 140
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "What happened"
+                },
+                "properties": [
+                  {
+                    "id": "custom.cellOptions",
+                    "value": {
+                      "type": "color-text"
+                    }
+                  },
+                  {
+                    "id": "mappings",
+                    "value": [
+                      {
+                        "type": "value",
+                        "options": {
+                          "Admitted unpinned after an error": {
+                            "color": "red",
+                            "index": 0
+                          },
+                          "Pinned container refusals reported by the plugin": {
+                            "color": "red",
+                            "index": 1
+                          },
+                          "Drift evictions stuck": {
+                            "color": "red",
+                            "index": 2
+                          },
+                          "Machine config apply failed": {
+                            "color": "red",
+                            "index": 3
+                          },
+                          "Refused for lack of room": {
+                            "color": "orange",
+                            "index": 4
+                          },
+                          "Pinning drifted": {
+                            "color": "orange",
+                            "index": 5
+                          },
+                          "Plugin not ready at admission": {
+                            "color": "orange",
+                            "index": 6
+                          },
+                          "Pinned container refusals reported for lack of room": {
+                            "color": "orange",
+                            "index": 7
+                          }
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          "targets": [
+            {
+              "expr": "label_replace(sum(cpu_pinning_pods_skipped_total), \"problem\", \"Left unpinned on purpose\", \"\", \"\") or label_replace(sum(cpu_pinning_webhook_bypasses_total), \"problem\", \"Admitted unpinned after an error\", \"\", \"\") or label_replace(sum(cpu_pinning_capacity_check_failures_total), \"problem\", \"Refused for lack of room\", \"\", \"\") or label_replace(sum(cpu_pinning_pods_drifted_total), \"problem\", \"Pinning drifted\", \"\", \"\") or label_replace(sum(cpu_pinning_drift_evictions_total{outcome=~\"pdb-blocked|error\"}), \"problem\", \"Drift evictions stuck\", \"\", \"\") or label_replace(sum(cpu_pinning_pods_pinning_blocked_total{cause!=\"no-capacity\"}), \"problem\", \"Pinned container refusals reported by the plugin\", \"\", \"\") or label_replace(sum(cpu_pinning_pods_pinning_blocked_total{cause=\"no-capacity\"}), \"problem\", \"Pinned container refusals reported for lack of room\", \"\", \"\") or label_replace(sum(cpu_pinning_webhook_plugin_not_ready_total), \"problem\", \"Plugin not ready at admission\", \"\", \"\") or label_replace(sum(cpu_pinning_balloonspolicy_reconcile_errors_total), \"problem\", \"Machine config apply failed\", \"\", \"\")",
+              "refId": "A",
+              "instant": true,
+              "format": "table",
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+              }
+            }
+          ],
+          "transformations": [
+            {
+              "id": "filterByValue",
+              "options": {
+                "type": "include",
+                "match": "any",
+                "filters": [
+                  {
+                    "fieldName": "Value",
+                    "config": {
+                      "id": "greater",
+                      "options": {
+                        "value": 0
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {
+                  "Time": true
+                },
+                "indexByName": {
+                  "problem": 0,
+                  "Value": 1
+                },
+                "renameByName": {
+                  "problem": "What happened",
+                  "Value": "How many"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "__LOKI_PANELS__"
+  ]
+}
